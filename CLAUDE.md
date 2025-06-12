@@ -7,9 +7,9 @@
 KY点餐是一个基于React和TypeScript的网页应用，用于自动化菜品选择和点餐。根据人数、预算、菜品搭配等条件，自动生成满足要求的菜品清单。
 
 ## 技术栈
-- **前端框架**: React 18+ + TypeScript
-- **构建工具**: Vite
-- **测试框架**: Vitest + React Testing Library
+- **前端框架**: React 19+ + TypeScript 5+
+- **构建工具**: Vite 6+
+- **测试框架**: Vitest 3+ + React Testing Library
 - **样式方案**: CSS Modules 或 Styled Components
 - **部署平台**: GitHub Pages
 - **数据格式**: JSON（Excel仅用于数据上传）
@@ -145,11 +145,14 @@ interface Constraints {
    - 避免使用过于小众或维护不活跃的库
 
 3. **推荐库列表**:
-   - **Excel处理**: `xlsx` (>25k stars)
-   - **状态管理**: `zustand` (>40k stars) 或 React Context
-   - **样式方案**: `styled-components` (>40k stars) 或 CSS Modules
+   - **Excel处理**: `xlsx` (~35k stars) - 注意: 需从CDN安装最新版本
+     ```json
+     "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
+     ```
+   - **状态管理**: `zustand` (~49k stars) 或 React Context
+   - **样式方案**: `styled-components` (~41k stars) 或 CSS Modules
    - **工具库**: `lodash-es` (>58k stars) 或原生JS优先
-   - **图标**: `lucide-react` (>8k stars) 或 `react-icons` (>11k stars)
+   - **图标**: `lucide-react` (~10k stars) 或 `react-icons` (>11k stars)
    - **UI组件**: `@headlessui/react` (>24k stars) 或自定义组件优先
 
 4. **库使用原则**:
