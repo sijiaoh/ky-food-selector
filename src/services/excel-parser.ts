@@ -1,4 +1,5 @@
 import type { ParsedFileData, Dish } from '@/types'
+import { parseCSVLine } from '@/utils/csv-parser'
 
 export async function parseExcelFile(file: File): Promise<ParsedFileData> {
   const startTime = Date.now()
@@ -42,7 +43,7 @@ export async function parseExcelFile(file: File): Promise<ParsedFileData> {
     const row = lines[i]?.trim()
     if (!row) continue
     
-    const columns = row.split(',').map(col => col.trim())
+    const columns = parseCSVLine(row)
     
     if (columns.length < 8) {
       errors.push({

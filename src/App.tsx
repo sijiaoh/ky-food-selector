@@ -43,7 +43,7 @@ function App() {
             <p className="upload-description">
               请上传包含菜品信息的CSV或Excel文件。文件应包含：菜名、价格、类型、温度、荤素、标签、基础个数、根据人数加量等字段。
               <br />
-              <strong>标签使用空格分隔</strong>，例如："猪肉 红烧 下饭"或"豆腐 川菜 素食"。
+              <strong>标签支持空格或逗号分隔</strong>，例如："猪肉 红烧 下饭"或"豆腐,川菜,素食"。
             </p>
             <button 
               className="sample-button"

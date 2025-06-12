@@ -15,7 +15,7 @@ describe('示例数据', () => {
     expect(result.dishes).toHaveLength(7)
     expect(result.errors).toEqual([])
     
-    // 验证标签解析正确
+    // 验证标签解析正确 - 混合逗号和空格分隔符
     const baiMiFan = result.dishes.find(dish => dish.name === '白米饭')
     expect(baiMiFan?.tags).toEqual(['米饭', '主食'])
     
@@ -24,6 +24,9 @@ describe('示例数据', () => {
     
     const maPoDuoFu = result.dishes.find(dish => dish.name === '麻婆豆腐')
     expect(maPoDuoFu?.tags).toEqual(['豆腐', '川菜', '素食'])
+    
+    const lvDouSha = result.dishes.find(dish => dish.name === '绿豆沙')
+    expect(lvDouSha?.tags).toEqual(['绿豆', '甜品', '消暑'])
   })
 
   it('应该包含所有菜品类型', async () => {
