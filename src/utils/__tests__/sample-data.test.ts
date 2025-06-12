@@ -12,7 +12,7 @@ describe('示例数据', () => {
     const result = await parseExcelFile(file)
     
     // 验证解析成功
-    expect(result.dishes).toHaveLength(7)
+    expect(result.dishes).toHaveLength(10)
     expect(result.errors).toEqual([])
     
     // 验证标签解析正确 - 混合逗号和空格分隔符
@@ -27,6 +27,21 @@ describe('示例数据', () => {
     
     const lvDouSha = result.dishes.find(dish => dish.name === '绿豆沙')
     expect(lvDouSha?.tags).toEqual(['绿豆', '甜品', '消暑'])
+    
+    // 验证空值字段处理正确
+    const liangBanHuangGua = result.dishes.find(dish => dish.name === '凉拌黄瓜')
+    expect(liangBanHuangGua?.temperature).toBeUndefined() // 温度为空
+    expect(liangBanHuangGua?.meatType).toBe('素') // 荤素有值
+    expect(liangBanHuangGua?.scaleWithPeople).toBe(false) // 根据人数加量为空，默认false
+    
+    const xiaoLongBao = result.dishes.find(dish => dish.name === '小笼包')
+    expect(xiaoLongBao?.temperature).toBeUndefined() // 温度为空
+    expect(xiaoLongBao?.meatType).toBe('荤') // 荤素有值
+    expect(xiaoLongBao?.baseQuantity).toBe(2) // 基础个数为2
+    
+    const suanMeiTang = result.dishes.find(dish => dish.name === '酸梅汤')
+    expect(suanMeiTang?.temperature).toBe('冷') // 温度有值
+    expect(suanMeiTang?.meatType).toBeUndefined() // 荤素为空
   })
 
   it('应该包含所有菜品类型', async () => {
@@ -85,5 +100,29 @@ describe('示例数据', () => {
     const avgVegPrice = vegDishes.reduce((sum, dish) => sum + dish.price, 0) / vegDishes.length
     
     expect(avgMeatPrice).toBeGreaterThan(avgVegPrice)
+  })
+
+  it('应该正确处理空值字段', async () => {
+    const file = {
+      size: SAMPLE_CSV_DATA.length,
+      text: () => Promise.resolve(SAMPLE_CSV_DATA)
+    } as File
+    
+    const result = await parseExcelFile(file)
+    
+    // 验证有些菜品的可选字段为空
+    const dishesWithEmptyTemp = result.dishes.filter(dish => !dish.temperature)
+    const dishesWithEmptyMeat = result.dishes.filter(dish => !dish.meatType)
+    
+    expect(dishesWithEmptyTemp.length).toBeGreaterThan(0)
+    expect(dishesWithEmptyMeat.length).toBeGreaterThan(0)
+    
+    // 验证空值不影响必填字段
+    result.dishes.forEach(dish => {
+      expect(dish.name).toBeTruthy()
+      expect(dish.price).toBeGreaterThan(0)
+      expect(dish.type).toBeTruthy()
+      expect(dish.baseQuantity).toBeGreaterThanOrEqual(1)
+    })
   })
 })
