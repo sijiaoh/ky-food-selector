@@ -3,16 +3,16 @@ export interface Dish {
   name: string;
   price: number;
   type: '主食' | '主菜' | '副菜' | '汤' | '点心';
-  temperature?: '热' | '冷' | '无';
-  meatType?: '荤' | '素' | '无';
+  temperature?: '热' | '冷' | '无' | undefined;
+  meatType?: '荤' | '素' | '无' | undefined;
   tags: string[];
   baseQuantity: number;
   scaleWithPeople: boolean;
-  description?: string;
-  allergens?: string[];
-  spicyLevel?: 1 | 2 | 3 | 4 | 5;
-  cookingTime?: number;
-  popularity?: number;
+  description?: string | undefined;
+  allergens?: string[] | undefined;
+  spicyLevel?: 1 | 2 | 3 | 4 | 5 | undefined;
+  cookingTime?: number | undefined;
+  popularity?: number | undefined;
 }
 
 export interface Constraints {
