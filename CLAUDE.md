@@ -330,12 +330,190 @@ interface AppError {
 - **操作反馈**: Toast 通知 + 状态显示 + 操作历史
 - **可访问性**: 键盘导航 + 屏幕阅读器 + 高对比度模式
 
+## 测试驱动开发(TDD)工作流程
+
+### 核心开发原则
+**🔴 RED → 🟢 GREEN → 🔵 REFACTOR**
+
+1. **先写测试，再写代码**: 任何功能开发都必须遵循测试驱动开发流程
+2. **循序渐进**: 不允许一步到位开发复杂功能，必须拆分为小步骤
+3. **每次通过测试后考虑提交**: 每个绿色(通过)的测试都是一个潜在的提交点
+
+### TDD 开发流程
+```typescript
+// TDD 工作流程定义
+interface TDDWorkflow {
+  phase: 'RED' | 'GREEN' | 'REFACTOR';
+  description: string;
+  actions: string[];
+  commitConsideration: boolean;
+}
+
+const tddCycle: TDDWorkflow[] = [
+  {
+    phase: 'RED',
+    description: '编写失败的测试',
+    actions: [
+      '明确需求和预期行为',
+      '编写最小化的失败测试',
+      '确保测试失败原因正确',
+      '运行测试套件确认红色状态'
+    ],
+    commitConsideration: false
+  },
+  {
+    phase: 'GREEN',
+    description: '编写最少代码使测试通过',
+    actions: [
+      '实现最简单的解决方案',
+      '不考虑优雅性，只求通过测试',
+      '运行测试确认绿色状态',
+      '运行完整测试套件确保无回归'
+    ],
+    commitConsideration: true // 🟢 考虑提交点
+  },
+  {
+    phase: 'REFACTOR',
+    description: '重构代码保持测试通过',
+    actions: [
+      '优化代码结构和可读性',
+      '消除重复代码',
+      '改善变量和函数命名',
+      '持续运行测试确保绿色状态'
+    ],
+    commitConsideration: true // 🟢 考虑提交点
+  }
+];
+```
+
+### 渐进式开发策略
+```typescript
+// 功能拆分原则
+interface FeatureBreakdown {
+  feature: string;
+  complexity: 'simple' | 'medium' | 'complex';
+  steps: Array<{
+    stepName: string;
+    testDescription: string;
+    implementation: string;
+    estimatedTime: string;
+  }>;
+}
+
+// 示例：菜品生成器功能拆分
+const dishGeneratorBreakdown: FeatureBreakdown = {
+  feature: '菜品生成器',
+  complexity: 'complex',
+  steps: [
+    {
+      stepName: '基础数据验证',
+      testDescription: '验证输入的菜品数据格式正确',
+      implementation: '实现基础的 Dish 接口验证',
+      estimatedTime: '30分钟'
+    },
+    {
+      stepName: '简单预算过滤',
+      testDescription: '根据预算过滤超出价格的菜品',
+      implementation: '实现价格范围过滤逻辑',
+      estimatedTime: '45分钟'
+    },
+    {
+      stepName: '基础类型搭配',
+      testDescription: '生成包含主食、主菜、副菜的基础搭配',
+      implementation: '实现类型分组和基础选择逻辑',
+      estimatedTime: '60分钟'
+    }
+    // ... 更多步骤
+  ]
+};
+```
+
+### Git 提交策略与时机
+```bash
+# 提交时机判断
+## ✅ 建议提交的情况
+- 测试从红色变为绿色 (功能完成)
+- 重构完成且所有测试仍然通过
+- 添加了新的测试用例且通过
+- 修复了一个具体的 bug 且有测试覆盖
+- 完成了一个完整的 TDD 循环
+
+## ❌ 不建议提交的情况  
+- 测试仍然是红色状态
+- 重构进行到一半
+- 代码存在明显的临时 hack
+- 测试覆盖率下降
+- TypeScript 类型检查失败
+
+# 提交信息规范
+feat: 实现菜品价格过滤基础功能
+
+- ✅ 添加价格范围验证测试
+- ✅ 实现基础价格过滤算法  
+- ✅ 所有测试通过，覆盖率保持 >85%
+
+# 提交前检查清单
+npm run test        # 所有测试必须通过
+npm run typecheck   # 类型检查必须通过
+npm run lint        # 代码规范检查必须通过
+```
+
+### 微步骤开发示例
+```typescript
+// 示例：实现菜品筛选功能的微步骤
+
+// 🔴 步骤1: 写最简单的测试
+describe('菜品筛选器', () => {
+  it('应该返回空数组当没有菜品时', () => {
+    const result = filterDishesByBudget([], 100);
+    expect(result).toEqual([]);
+  });
+});
+
+// 🟢 步骤1: 实现最简单的代码
+function filterDishesByBudget(dishes: Dish[], budget: number): Dish[] {
+  return [];
+}
+// ✅ 提交点: "feat: 实现菜品筛选器基础结构"
+
+// 🔴 步骤2: 添加实际筛选测试  
+it('应该返回价格在预算内的菜品', () => {
+  const dishes = [
+    { id: '1', name: '菜A', price: 50, type: '主菜' },
+    { id: '2', name: '菜B', price: 150, type: '主菜' }
+  ];
+  const result = filterDishesByBudget(dishes, 100);
+  expect(result).toEqual([dishes[0]]);
+});
+
+// 🟢 步骤2: 实现实际筛选逻辑
+function filterDishesByBudget(dishes: Dish[], budget: number): Dish[] {
+  if (dishes.length === 0) return [];
+  return dishes.filter(dish => dish.price <= budget);
+}
+// ✅ 提交点: "feat: 添加按预算筛选菜品功能"
+
+// 🔵 步骤3: 重构改善代码质量 (如果需要)
+// ✅ 提交点: "refactor: 优化菜品筛选逻辑可读性"
+```
+
+### 测试先行检查清单
+- [ ] 📋 **需求明确**: 每个功能开发前先明确输入、输出和边界条件
+- [ ] 🔴 **红色测试**: 先写失败的测试，确认测试能够正确失败
+- [ ] 🟢 **绿色实现**: 用最简单的方式让测试通过
+- [ ] 🔄 **小步迭代**: 每次只解决一个小问题，避免大跳跃
+- [ ] ✅ **提交考虑**: 每次测试通过后考虑是否应该提交
+- [ ] 🔧 **重构优化**: 在绿色状态下重构，保持测试通过
+- [ ] 📊 **覆盖率保持**: 确保测试覆盖率不下降
+
 ## 开发注意事项
 1. **必须参考需求文档**: 每次开发前查看 `docs/` 目录
-2. **简洁代码**: 避免重复和不必要的值检测
-3. **积极测试**: 所有功能都需要对应的测试用例
-4. **JSON为主**: 内部逻辑和测试都以JSON数据为主
-5. **自我进化**: 代码应该具备根据需要自我更新的能力
+2. **测试驱动开发**: 严格遵循 TDD 流程，先写测试再写代码
+3. **循序渐进原则**: 禁止一步到位开发，必须拆分为小步骤
+4. **提交时机判断**: 每次测试通过后评估是否应该提交
+5. **简洁代码**: 避免重复和不必要的值检测
+6. **JSON为主**: 内部逻辑和测试都以JSON数据为主
+7. **自我进化**: 代码应该具备根据需要自我更新的能力
 
 ## 外部库使用规范
 1. **包管理器安装**: 使用外部库时必须通过包管理器命令安装，不能直接修改package.json文件
