@@ -187,38 +187,55 @@
   font-size: 1.1rem;
 }
 
-/* 菜品预览 */
+/* 菜品预览表格 */
 .dishes-preview h3 {
   margin: 0 0 1rem 0;
   color: #333;
 }
 
-.dishes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+.dishes-table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  background: white;
 }
 
-.dish-card {
+.dishes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.dishes-table th {
   background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  padding: 1rem;
-  text-align: center;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+}
+
+.dishes-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+  vertical-align: top;
+}
+
+.dishes-table tbody tr:hover {
+  background: #f8f9fa;
 }
 
 .dish-name {
   font-weight: 600;
   color: #333;
-  margin-bottom: 0.5rem;
+  min-width: 80px;
 }
 
 .dish-price {
   color: #dc3545;
   font-weight: bold;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
+  white-space: nowrap;
 }
 
 .dish-type {
@@ -228,12 +245,42 @@
   border-radius: 4px;
   font-size: 0.8rem;
   display: inline-block;
+  white-space: nowrap;
 }
 
-.more-dishes {
+.dish-temperature,
+.dish-meat {
+  text-align: center;
   color: #666;
-  font-style: italic;
-  margin: 0;
+}
+
+.dish-tags {
+  max-width: 150px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag {
+  background: #e9ecef;
+  color: #495057;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.dish-quantity {
+  text-align: center;
+  font-weight: 500;
+}
+
+.dish-scale {
+  text-align: center;
+  color: #666;
 }
 
 /* 错误列表 */
@@ -306,10 +353,6 @@
     grid-template-columns: 1fr;
   }
 
-  .dishes-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-
   .upload-header {
     flex-direction: column;
     gap: 1rem;
@@ -317,5 +360,23 @@
 
   .sample-button {
     align-self: flex-start;
+  }
+
+  .dishes-table {
+    font-size: 0.8rem;
+  }
+
+  .dishes-table th,
+  .dishes-table td {
+    padding: 0.4rem 0.3rem;
+  }
+
+  .dish-tags {
+    max-width: 100px;
+  }
+
+  .tag {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.3rem;
   }
 }

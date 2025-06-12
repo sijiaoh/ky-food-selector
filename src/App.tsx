@@ -85,21 +85,45 @@ function App() {
 
             {parsedData.dishes.length > 0 && (
               <div className="dishes-preview">
-                <h3>菜品预览</h3>
-                <div className="dishes-grid">
-                  {parsedData.dishes.slice(0, 6).map((dish) => (
-                    <div key={dish.id} className="dish-card">
-                      <div className="dish-name">{dish.name}</div>
-                      <div className="dish-price">¥{dish.price}</div>
-                      <div className="dish-type">{dish.type}</div>
-                    </div>
-                  ))}
+                <h3>菜品列表</h3>
+                <div className="dishes-table-container">
+                  <table className="dishes-table">
+                    <thead>
+                      <tr>
+                        <th>菜名</th>
+                        <th>价格</th>
+                        <th>类型</th>
+                        <th>温度</th>
+                        <th>荤素</th>
+                        <th>标签</th>
+                        <th>基础个数</th>
+                        <th>根据人数加量</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsedData.dishes.map((dish) => (
+                        <tr key={dish.id}>
+                          <td className="dish-name">{dish.name}</td>
+                          <td className="dish-price">¥{dish.price}</td>
+                          <td className="dish-type">{dish.type}</td>
+                          <td className="dish-temperature">{dish.temperature || '-'}</td>
+                          <td className="dish-meat">{dish.meatType || '-'}</td>
+                          <td className="dish-tags">
+                            {dish.tags.length > 0 ? (
+                              <div className="tags-container">
+                                {dish.tags.map((tag, index) => (
+                                  <span key={index} className="tag">{tag}</span>
+                                ))}
+                              </div>
+                            ) : '-'}
+                          </td>
+                          <td className="dish-quantity">{dish.baseQuantity}</td>
+                          <td className="dish-scale">{dish.scaleWithPeople ? '是' : '否'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                {parsedData.dishes.length > 6 && (
-                  <p className="more-dishes">
-                    还有 {parsedData.dishes.length - 6} 个菜品...
-                  </p>
-                )}
               </div>
             )}
 
