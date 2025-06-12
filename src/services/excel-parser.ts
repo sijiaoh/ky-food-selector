@@ -48,12 +48,25 @@ export async function parseExcelFile(file: File): Promise<ParsedFileData> {
       errors.push({
         row: i + 1,
         field: 'row',
-        message: `行数据不完整，期望8列，实际${columns.length}列`,
+        message: `行数据不完整，期望至少8列，实际${columns.length}列`,
       })
       continue
     }
     
-    const [name, priceStr, type, temperature, meatType, tagsStr, baseQuantityStr, scaleWithPeopleStr] = columns
+    // 处理标签可能跨越多列的情况
+    const name = columns[0]
+    const priceStr = columns[1]
+    const type = columns[2]
+    const temperature = columns[3]
+    const meatType = columns[4]
+    
+    // 从第6列开始到倒数第2列都可能是标签
+    const baseQuantityStr = columns[columns.length - 2]
+    const scaleWithPeopleStr = columns[columns.length - 1]
+    
+    // 标签部分：从第6列到倒数第3列
+    const tagColumns = columns.slice(5, columns.length - 2)
+    const tagsStr = tagColumns.join(',') // 重新组合标签
     
     if (!name) {
       errors.push({ row: i + 1, field: 'name', message: '菜名不能为空' })
@@ -66,6 +79,14 @@ export async function parseExcelFile(file: File): Promise<ParsedFileData> {
       continue
     }
     
+    // 解析标签：支持空格和逗号分隔
+    let tags: string[] = []
+    if (tagsStr) {
+      // 先按逗号分割，再按空格分割
+      const tagParts = tagsStr.split(',').flatMap(part => part.split(' '))
+      tags = tagParts.filter(tag => tag.trim()).map(tag => tag.trim())
+    }
+    
     const dish: Dish = {
       id: `dish_${Date.now()}_${i}`,
       name,
@@ -73,7 +94,7 @@ export async function parseExcelFile(file: File): Promise<ParsedFileData> {
       type: type as Dish['type'],
       ...(temperature && temperature !== '无' && { temperature: temperature as Dish['temperature'] }),
       ...(meatType && meatType !== '无' && { meatType: meatType as Dish['meatType'] }),
-      tags: tagsStr ? tagsStr.split(' ').filter(tag => tag.trim()) : [],
+      tags,
       baseQuantity: Number(baseQuantityStr) || 1,
       scaleWithPeople: scaleWithPeopleStr === 'Yes',
     }

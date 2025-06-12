@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import { FileUpload } from './components/features/file-upload'
 import { parseExcelFile } from './services/excel-parser'
+import { downloadSampleFile } from './utils/sample-data'
 import type { ParsedFileData } from './types'
 
 function App() {
@@ -38,6 +39,19 @@ function App() {
       <main className="App-main">
         <section className="upload-section">
           <h2>1. 上传菜品数据</h2>
+          <div className="upload-header">
+            <p className="upload-description">
+              请上传包含菜品信息的CSV或Excel文件。文件应包含：菜名、价格、类型、温度、荤素、标签、基础个数、根据人数加量等字段。
+            </p>
+            <button 
+              className="sample-button"
+              onClick={downloadSampleFile}
+              type="button"
+            >
+              📥 下载示例文件
+            </button>
+          </div>
+          
           <FileUpload onFileSelect={handleFileSelect} loading={loading} />
           
           {error && (
