@@ -1,0 +1,99 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output
+dist
+dist-ssr
+build
+*.local
+
+# TypeScript
+*.tsbuildinfo
+.tsbuildinfo
+
+# Testing
+coverage
+.nyc_output
+.vitest
+test-results/
+playwright-report/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+.tmp
+.temp
+*.tmp
+*.temp
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Claude Code specific
+.claude/
+
+# Storybook
+storybook-static
+
+# Bundle analyzer
+bundle-report.html
+.vite-bundle-analyzer/
+
+# ESLint cache
+.eslintcache
+
+# Prettier ignore
+.prettierignore
+
+# Local development
+*.local.ts
+*.local.js
+dev-dist/
+
+# Deploy
+.vercel
+.netlify
+
+# Performance testing
+.lighthouseci/
