@@ -548,18 +548,18 @@ interface DevelopmentWorkflow {
 const standardWorkflow: DevelopmentWorkflow = {
   preparation: [
     '1. 阅读 docs/ 目录了解具体需求',
-    '2. 查看 PROJECT_OVERVIEW.md 了解项目现状',
+    '2. 查看 dev-docs/PROJECT_OVERVIEW.md 了解项目现状',
     '3. 检查当前技术债务和已知问题',
     '4. 确认开发任务优先级和复杂度'
   ],
   development: [
     '1. 遵循 TDD 红绿重构循环',
-    '2. 参考 PROJECT_OVERVIEW.md 中的设计决策',
+    '2. 参考 dev-docs/PROJECT_OVERVIEW.md 中的设计决策',
     '3. 避免重复已知的技术债务',
     '4. 每个功能完成后考虑提交'
   ],
   completion: [
-    '1. 更新 PROJECT_OVERVIEW.md 开发进度',
+    '1. 更新 dev-docs/PROJECT_OVERVIEW.md 开发进度',
     '2. 记录新的设计决策和技术债务',
     '3. 运行完整测试套件确保质量',
     '4. 更新文档时间戳和版本信息'
@@ -567,8 +567,8 @@ const standardWorkflow: DevelopmentWorkflow = {
 };
 ```
 
-### 🔍 PROJECT_OVERVIEW.md 使用指南
-**在以下情况下必须查看 PROJECT_OVERVIEW.md：**
+### 🔍 dev-docs/PROJECT_OVERVIEW.md 使用指南
+**在以下情况下必须查看 dev-docs/PROJECT_OVERVIEW.md：**
 
 - **开始新功能开发前**: 了解当前进度和相关技术背景
 - **遇到技术问题时**: 查看已知技术债务和解决方案
@@ -584,7 +584,7 @@ const standardWorkflow: DevelopmentWorkflow = {
 - **更新内容**: 技术栈版本、架构设计、开发命令、数据模型、代码规范
 - **更新方式**: 直接编辑对应章节，保持配置文件的准确性
 
-### 自动更新 PROJECT_OVERVIEW.md  
+### 自动更新 dev-docs/PROJECT_OVERVIEW.md  
 - **触发时机**: 完成新功能、修复重要问题、重构关键模块时
 - **更新内容**: 
   - 开发进度状态 (✅/⚠️/❌)
@@ -601,9 +601,9 @@ const standardWorkflow: DevelopmentWorkflow = {
   ```
 
 ### 文档同步检查清单
-- [ ] 新功能完成后更新 PROJECT_OVERVIEW.md 进度状态
+- [ ] 新功能完成后更新 dev-docs/PROJECT_OVERVIEW.md 进度状态
 - [ ] 架构变更后更新 CLAUDE.md 技术栈和数据模型
-- [ ] 重要设计决策后添加到 PROJECT_OVERVIEW.md 决策记录
+- [ ] 重要设计决策后添加到 dev-docs/PROJECT_OVERVIEW.md 决策记录
 - [ ] 技术债务变化后更新改进计划
 - [ ] 每次重要提交后更新最后更新时间
 
