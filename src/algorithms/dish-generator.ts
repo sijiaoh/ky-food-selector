@@ -1,5 +1,51 @@
 import type { Dish, Constraints, GenerationResult, ManualAdjustment } from '../types'
 
+// 随机打乱数组的工具函数
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = shuffled[i]!
+    shuffled[i] = shuffled[j]!
+    shuffled[j] = temp
+  }
+  return shuffled
+}
+
+// 为指定类型选择菜品的工具函数
+const selectDishesForType = (availableForType: Dish[]) => {
+  const sortedDishes = availableForType.sort((a, b) => a.price - b.price)
+  const cheapCount = Math.ceil(sortedDishes.length / 3)
+  const midCount = Math.ceil(sortedDishes.length / 3)
+  
+  const cheapDishes = sortedDishes.slice(0, cheapCount)
+  const midDishes = sortedDishes.slice(cheapCount, cheapCount + midCount)
+  const expensiveDishes = sortedDishes.slice(cheapCount + midCount)
+  
+  const shuffledCheap = shuffleArray(cheapDishes)
+  const shuffledMid = shuffleArray(midDishes)
+  const shuffledExpensive = shuffleArray(expensiveDishes)
+  
+  // 智能随机策略选择菜品
+  const getRandomDish = (): Dish | undefined => {
+    const rand = Math.random()
+    if (rand < 0.7 && shuffledCheap.length > 0) {
+      return shuffledCheap.shift()
+    } else if (rand < 0.95 && shuffledMid.length > 0) {
+      return shuffledMid.shift()
+    } else if (shuffledExpensive.length > 0) {
+      return shuffledExpensive.shift()
+    } else if (shuffledMid.length > 0) {
+      return shuffledMid.shift()
+    } else if (shuffledCheap.length > 0) {
+      return shuffledCheap.shift()
+    }
+    return undefined
+  }
+  
+  return { getRandomDish, remainingDishes: [...shuffledCheap, ...shuffledMid, ...shuffledExpensive] }
+}
+
 export function generateDishes(
   availableDishes: Dish[], 
   constraints: Constraints
@@ -21,7 +67,7 @@ export function generateDishes(
     return acc
   }, {} as Record<Dish['type'], Dish[]>)
 
-  // 为每种类型选择菜品
+  // 先处理用户明确指定数量的菜品类型
   for (const [type, requestedCount] of Object.entries(constraints.typeDistribution)) {
     if (requestedCount <= 0) continue
 
@@ -39,52 +85,8 @@ export function generateDishes(
       warnings.push(`${type}菜品数量不足，请求${requestedCount}个，仅能提供${actualCount}个`)
     }
 
-    // 增加随机性：价格排序 + 随机打乱
-    const sortedDishes = availableForType.sort((a, b) => a.price - b.price)
-    
-    // 为了增加随机性，将菜品分为三档：便宜(前1/3)、中等(中1/3)、昂贵(后1/3)
-    const cheapCount = Math.ceil(sortedDishes.length / 3)
-    const midCount = Math.ceil(sortedDishes.length / 3)
-    
-    const cheapDishes = sortedDishes.slice(0, cheapCount)
-    const midDishes = sortedDishes.slice(cheapCount, cheapCount + midCount)
-    const expensiveDishes = sortedDishes.slice(cheapCount + midCount)
-    
-    // 随机打乱每一档的菜品
-    const shuffleArray = <T>(array: T[]): T[] => {
-      const shuffled = [...array]
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        const temp = shuffled[i]!
-        shuffled[i] = shuffled[j]!
-        shuffled[j] = temp
-      }
-      return shuffled
-    }
-    
-    const shuffledCheap = shuffleArray(cheapDishes)
-    const shuffledMid = shuffleArray(midDishes)
-    const shuffledExpensive = shuffleArray(expensiveDishes)
-    
-    // 智能随机策略：平衡预算控制与菜品多样性
-    // 70%概率从便宜档选择（预算友好）
-    // 25%概率从中档选择（平衡性价比）
-    // 5%概率从昂贵档选择（偶尔奢侈一下）
-    const getRandomDish = (): Dish | undefined => {
-      const rand = Math.random()
-      if (rand < 0.7 && shuffledCheap.length > 0) {
-        return shuffledCheap.shift() // 优先便宜菜品
-      } else if (rand < 0.95 && shuffledMid.length > 0) {
-        return shuffledMid.shift() // 适度选择中档菜品
-      } else if (shuffledExpensive.length > 0) {
-        return shuffledExpensive.shift() // 偶尔选择昂贵菜品
-      } else if (shuffledMid.length > 0) {
-        return shuffledMid.shift() // 回退到中档
-      } else if (shuffledCheap.length > 0) {
-        return shuffledCheap.shift() // 最后回退到便宜档
-      }
-      return undefined
-    }
+    // 使用工具函数进行智能随机选择
+    const { getRandomDish, remainingDishes } = selectDishesForType(availableForType)
     
     for (let i = 0; i < actualCount; i++) {
       const dish = getRandomDish()
@@ -101,11 +103,10 @@ export function generateDishes(
       }
 
       // 找到同类型的其他可选菜品作为替换选项
-      const remainingDishes = [...shuffledCheap, ...shuffledMid, ...shuffledExpensive]
-        .filter(altDish => altDish.id !== dish.id)
+      const filteredRemaining = remainingDishes.filter(altDish => altDish.id !== dish.id)
       
       // 随机选择3个替换选项，确保多样性
-      const alternatives = shuffleArray(remainingDishes).slice(0, 3)
+      const alternatives = shuffleArray(filteredRemaining).slice(0, 3)
 
       const dishItem: GenerationResult['dishes'][0] = {
         dish,
@@ -125,6 +126,57 @@ export function generateDishes(
     }
   }
 
+  // 自动安排未指定数量的菜品类型
+  const specifiedTypes = new Set(Object.keys(constraints.typeDistribution))
+  const allTypes = Object.keys(dishesByType) as Dish['type'][]
+  const unspecifiedTypes = allTypes.filter(type => !specifiedTypes.has(type))
+  
+  // 为未指定的类型自动安排菜品，但需要考虑剩余预算
+  const remainingBudget = constraints.budget - totalCost
+  if (remainingBudget > 0 && unspecifiedTypes.length > 0) {
+    // 随机选择1-2个未指定的类型进行自动安排
+    const typesToAdd = shuffleArray(unspecifiedTypes).slice(0, Math.min(2, unspecifiedTypes.length))
+    
+    for (const type of typesToAdd) {
+      const availableForType = dishesByType[type] || []
+      if (availableForType.length === 0) continue
+      
+      // 使用工具函数进行智能随机选择
+      const { getRandomDish, remainingDishes } = selectDishesForType(availableForType)
+      
+      // 尝试自动添加1个该类型的菜品
+      const dish = getRandomDish()
+      if (!dish) continue
+      
+      const quantity = dish.baseQuantity
+      const dishPrice = dish.scaleWithPeople ? dish.price * constraints.headcount : dish.price
+      const totalPrice = dishPrice * quantity
+      
+      // 检查是否在剩余预算内
+      if (totalCost + totalPrice <= constraints.budget) {
+        const filteredRemaining = remainingDishes.filter(altDish => altDish.id !== dish.id)
+        const alternatives = shuffleArray(filteredRemaining).slice(0, 3)
+        
+        const dishItem: GenerationResult['dishes'][0] = {
+          dish,
+          quantity,
+          totalPrice,
+          isFixed: false,
+          canReplace: alternatives.length > 0
+        }
+        
+        if (alternatives.length > 0) {
+          dishItem.alternatives = alternatives
+        }
+        
+        selectedDishes.push(dishItem)
+        totalCost += totalPrice
+        
+        warnings.push(`自动添加了${type}：${dish.name}`)
+      }
+    }
+  }
+
   const generationTime = Date.now() - startTime
 
   return {
@@ -132,7 +184,7 @@ export function generateDishes(
     totalCost,
     metadata: {
       generationTime,
-      algorithmVersion: 'v1.1.0-random',
+      algorithmVersion: 'v1.2.0-auto',
       satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
         type => selectedDishes.some(item => item.dish.type === type)
       ),

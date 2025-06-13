@@ -81,8 +81,8 @@ describe('ConstraintsForm', () => {
   it('应该在类型分布改变时调用onChange', () => {
     render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
     
-    // 找到主菜的输入框
-    const mainDishInput = screen.getByLabelText('主菜')
+    // 找到主菜的输入框（现在label包含了提示文本）
+    const mainDishInput = screen.getByLabelText(/主菜/)
     
     fireEvent.change(mainDishInput, { target: { value: '3' } })
     

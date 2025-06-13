@@ -337,6 +337,55 @@ describe('菜品生成算法', () => {
     // 确保有一定的多样性（不是100%都选便宜菜）
     expect(midRatio + expensiveRatio).toBeGreaterThan(0.1) // 中高档菜至少10%
   })
+
+  it('应该支持空值类型自动安排', () => {
+    // 创建包含多种类型的菜品集
+    const diverseDishes: Dish[] = [
+      { id: '1', name: '米饭', price: 3, type: '主食', tags: [], baseQuantity: 1, scaleWithPeople: true },
+      { id: '2', name: '红烧肉', price: 38, type: '主菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      { id: '3', name: '凉拌黄瓜', price: 8, type: '副菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      { id: '4', name: '紫菜蛋花汤', price: 15, type: '汤', tags: [], baseQuantity: 1, scaleWithPeople: true },
+      { id: '5', name: '绿豆沙', price: 8, type: '点心', tags: [], baseQuantity: 1, scaleWithPeople: false }
+    ]
+
+    // 只指定主食和主菜，其他类型留空（让算法自动安排）
+    const partialConstraints: Constraints = {
+      headcount: 4,
+      budget: 150, // 充足预算
+      typeDistribution: {
+        '主食': 1,
+        '主菜': 1
+        // 副菜、汤、点心未指定，让算法自动安排
+      },
+      temperatureDistribution: {},
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+
+    const result = generateDishes(diverseDishes, partialConstraints)
+
+    // 验证结果包含指定的类型
+    const selectedTypes = result.dishes.map(item => item.dish.type)
+    expect(selectedTypes).toContain('主食')
+    expect(selectedTypes).toContain('主菜')
+
+    // 验证可能自动添加了其他类型
+    const totalDishes = result.dishes.length
+    expect(totalDishes).toBeGreaterThanOrEqual(2) // 至少包含指定的2个
+
+    // 如果自动添加了菜品，应该有相应的警告信息
+    const autoAddWarnings = result.metadata.warnings.filter(warning => 
+      warning.includes('自动添加了')
+    )
+    
+    if (totalDishes > 2) {
+      expect(autoAddWarnings.length).toBeGreaterThan(0)
+    }
+
+    // 验证在预算范围内
+    expect(result.totalCost).toBeLessThanOrEqual(partialConstraints.budget)
+  })
 })
 
 describe('手动调整功能', () => {

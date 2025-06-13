@@ -112,11 +112,18 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
     }
   }
 
-  const handleTypeDistributionChange = (type: Dish['type'], value: number) => {
+  const handleTypeDistributionChange = (type: Dish['type'], value: number | undefined) => {
     const newTypeDistribution = {
-      ...constraints.typeDistribution,
-      [type]: value
+      ...constraints.typeDistribution
     }
+    
+    if (value === undefined || value === 0) {
+      // 空值或0时，从约束中删除该类型，让算法自动安排
+      delete newTypeDistribution[type]
+    } else {
+      newTypeDistribution[type] = value
+    }
+    
     onChange({
       ...constraints,
       typeDistribution: newTypeDistribution
@@ -193,13 +200,24 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
         <h3>菜品类型搭配</h3>
         {dishTypes.map((type) => (
           <div key={type} className="form-field">
-            <label htmlFor={`type-${type}`}>{type}</label>
+            <label htmlFor={`type-${type}`}>
+              {type}
+              <span className="field-hint">（留空表示自动安排）</span>
+            </label>
             <input
               id={`type-${type}`}
               type="number"
               min="0"
-              value={constraints.typeDistribution[type] || 0}
-              onChange={(e) => handleTypeDistributionChange(type, parseInt(e.target.value) || 0)}
+              placeholder="自动"
+              value={constraints.typeDistribution[type] || ''}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === '') {
+                  handleTypeDistributionChange(type, undefined)
+                } else {
+                  handleTypeDistributionChange(type, parseInt(value) || 0)
+                }
+              }}
             />
           </div>
         ))}
