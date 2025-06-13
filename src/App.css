@@ -286,9 +286,11 @@
 /* 菜品紧凑列表 */
 .dishes-compact-list {
   margin-top: 0.5rem;
-  border: 1px solid #dee2e6;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1px;
+  background: #dee2e6;
   border-radius: 6px;
-  background: white;
   overflow: hidden;
 }
 
@@ -297,14 +299,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid #f1f3f4;
+  background: white;
   transition: background-color 0.1s ease;
   font-size: 0.85rem;
   flex-wrap: wrap;
-}
-
-.dish-item-single:last-child {
-  border-bottom: none;
 }
 
 .dish-item-single:hover {
@@ -825,6 +823,10 @@
   }
 
   /* 单行列表响应式设计 */
+  .dishes-compact-list {
+    grid-template-columns: 1fr;
+  }
+
   .dish-item-single {
     padding: 0.3rem 0.5rem;
     gap: 0.3rem;
