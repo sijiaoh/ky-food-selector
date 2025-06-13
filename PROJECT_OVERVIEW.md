@@ -32,6 +32,12 @@ src/
 ├── hooks/              # 自定义Hooks (空)
 ├── types/              # 类型定义 (完整的Dish, Constraints等)
 └── constants/          # 常量配置
+
+docs/
+├── index.md                    # 主需求文档
+├── menu_excel_example.md       # 菜单示例
+├── preset-configurations.md    # 预设配置功能说明
+└── feature-specifications.md   # 功能规范和测试用例
 ```
 
 #### 数据模型
@@ -135,6 +141,7 @@ src/
 - ✅ **表单组件架构**: TDD开发，15个专项测试覆盖
 - ✅ **用户体验优化**: 实时验证、智能提示、预设配置
 - ✅ **功能完整性**: 基础设置、类型搭配、预算建议、配置保存
+- ✅ **正式功能文档**: 完整的需求规范、功能说明、测试用例
 
 ### 📝 技术债务和改进点
 
