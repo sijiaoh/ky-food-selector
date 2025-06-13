@@ -142,7 +142,8 @@ describe('Excel文件解析器', () => {
     
     expect(result.dishes).toHaveLength(0)
     expect(result.errors).toHaveLength(1)
-    expect(result.errors[0]?.message).toContain('缺少必需字段：价格')
+    // 当缺少价格字段时，会在数据验证阶段报价格错误
+    expect(result.errors[0]?.message).toContain('价格必须是大于0的数字')
   })
 
   it('应该支持不同的字段名变体', async () => {
