@@ -154,7 +154,9 @@ function App() {
                       <span className="dish-name-single">{dish.name}</span>
                       <span className="dish-price-single">¥{dish.price}</span>
                       <span className="dish-type-single">{dish.type}</span>
-                      <span className="dish-quantity-single">{dish.baseQuantity}{dish.scaleWithPeople ? '×人数' : ''}</span>
+                      <span className="dish-quantity-single">
+                        {dish.scaleWithPeople ? `${dish.baseQuantity}份/人` : `${dish.baseQuantity}份`}
+                      </span>
                       {dish.temperature && <span className="dish-attr-single">{dish.temperature}</span>}
                       {dish.meatType && <span className="dish-attr-single">{dish.meatType}</span>}
                       {dish.tags.length > 0 && (
