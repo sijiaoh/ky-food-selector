@@ -150,25 +150,21 @@ function App() {
                 <h3>菜品列表 ({parsedData.dishes.length}道菜)</h3>
                 <div className="dishes-compact-list">
                   {parsedData.dishes.map((dish) => (
-                    <div key={dish.id} className="dish-item">
-                      <div className="dish-main">
-                        <span className="dish-name">{dish.name}</span>
-                        <span className="dish-price">¥{dish.price}</span>
-                      </div>
-                      <div className="dish-details">
-                        <span className="dish-type-compact">{dish.type}</span>
-                        <span className="dish-quantity-compact">{dish.baseQuantity}{dish.scaleWithPeople ? '×人数' : ''}</span>
-                        {dish.temperature && <span className="dish-attr">{dish.temperature}</span>}
-                        {dish.meatType && <span className="dish-attr">{dish.meatType}</span>}
-                        {dish.tags.length > 0 && (
-                          <div className="dish-tags-compact">
-                            {dish.tags.slice(0, 3).map((tag, index) => (
-                              <span key={index} className="dish-tag-compact">{tag}</span>
-                            ))}
-                            {dish.tags.length > 3 && <span className="dish-tag-more">+{dish.tags.length - 3}</span>}
-                          </div>
-                        )}
-                      </div>
+                    <div key={dish.id} className="dish-item-single">
+                      <span className="dish-name-single">{dish.name}</span>
+                      <span className="dish-price-single">¥{dish.price}</span>
+                      <span className="dish-type-single">{dish.type}</span>
+                      <span className="dish-quantity-single">{dish.baseQuantity}{dish.scaleWithPeople ? '×人数' : ''}</span>
+                      {dish.temperature && <span className="dish-attr-single">{dish.temperature}</span>}
+                      {dish.meatType && <span className="dish-attr-single">{dish.meatType}</span>}
+                      {dish.tags.length > 0 && (
+                        <div className="dish-tags-single">
+                          {dish.tags.slice(0, 2).map((tag, index) => (
+                            <span key={index} className="dish-tag-single">{tag}</span>
+                          ))}
+                          {dish.tags.length > 2 && <span className="dish-tag-more-single">+{dish.tags.length - 2}</span>}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
