@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generateDishes } from '../dish-generator'
-import type { Dish, Constraints } from '../../types'
+import { generateDishes, applyManualAdjustments } from '../dish-generator'
+import type { Dish, Constraints, ManualAdjustment } from '../../types'
 
 describe('菜品生成算法', () => {
   const sampleDishes: Dish[] = [
@@ -187,5 +187,171 @@ describe('菜品生成算法', () => {
         
       expect(totalPrice).toBe(expectedPrice)
     })
+  })
+
+  it('应该包含替换选项和操作标志', () => {
+    const result = generateDishes(sampleDishes, basicConstraints)
+    
+    result.dishes.forEach(({ dish, canReplace, alternatives, isFixed }) => {
+      expect(typeof canReplace).toBe('boolean')
+      expect(typeof isFixed).toBe('boolean')
+      expect(isFixed).toBe(false) // 默认不固定
+      
+      if (canReplace) {
+        expect(Array.isArray(alternatives)).toBe(true)
+        expect(alternatives!.length).toBeGreaterThan(0)
+        // 确保替换选项不包含当前菜品
+        expect(alternatives!.some(alt => alt.id === dish.id)).toBe(false)
+      }
+    })
+  })
+})
+
+describe('手动调整功能', () => {
+  const sampleDishes: Dish[] = [
+    {
+      id: '1',
+      name: '白米饭',
+      price: 3,
+      type: '主食',
+      temperature: '热',
+      meatType: '素',
+      tags: ['米饭', '主食'],
+      baseQuantity: 1,
+      scaleWithPeople: true
+    },
+    {
+      id: '2',
+      name: '红烧肉',
+      price: 38,
+      type: '主菜',
+      temperature: '热',
+      meatType: '荤',
+      tags: ['猪肉', '红烧', '下饭'],
+      baseQuantity: 1,
+      scaleWithPeople: false
+    },
+    {
+      id: '3',
+      name: '糖醋里脊',
+      price: 42,
+      type: '主菜',
+      temperature: '热',
+      meatType: '荤',
+      tags: ['猪肉', '糖醋', '酸甜'],
+      baseQuantity: 1,
+      scaleWithPeople: false
+    }
+  ]
+
+  const basicConstraints: Constraints = {
+    headcount: 4,
+    budget: 200,
+    typeDistribution: {
+      '主食': 1,
+      '主菜': 1,
+      '副菜': 0,
+      '汤': 0,
+      '点心': 0
+    },
+    temperatureDistribution: {},
+    meatDistribution: {},
+    tagRequirements: {},
+    excludedTags: []
+  }
+
+  it('应该能固定菜品', () => {
+    const result = generateDishes(sampleDishes, basicConstraints)
+    const dishToFix = result.dishes[0]!
+    
+    const adjustments: ManualAdjustment[] = [
+      { type: 'fix', dishId: dishToFix.dish.id }
+    ]
+    
+    const adjustedResult = applyManualAdjustments(result, adjustments, basicConstraints)
+    const fixedDish = adjustedResult.dishes.find(item => item.dish.id === dishToFix.dish.id)
+    
+    expect(fixedDish?.isFixed).toBe(true)
+  })
+
+  it('应该能替换菜品', () => {
+    const result = generateDishes(sampleDishes, basicConstraints)
+    const dishToReplace = result.dishes.find(item => item.dish.type === '主菜')
+    const replacementDish = sampleDishes.find(dish => 
+      dish.type === '主菜' && dish.id !== dishToReplace?.dish.id
+    )
+    
+    if (!dishToReplace || !replacementDish) {
+      throw new Error('测试数据设置错误')
+    }
+    
+    const adjustments: ManualAdjustment[] = [
+      { type: 'replace', dishId: dishToReplace.dish.id, newDish: replacementDish }
+    ]
+    
+    const adjustedResult = applyManualAdjustments(result, adjustments, basicConstraints)
+    const replacedDish = adjustedResult.dishes.find(item => 
+      item.dish.id === replacementDish.id
+    )
+    
+    expect(replacedDish).toBeDefined()
+    expect(replacedDish?.dish.name).toBe(replacementDish.name)
+  })
+
+  it('应该能移除菜品', () => {
+    const result = generateDishes(sampleDishes, basicConstraints)
+    const originalLength = result.dishes.length
+    const dishToRemove = result.dishes[0]!
+    
+    const adjustments: ManualAdjustment[] = [
+      { type: 'remove', dishId: dishToRemove.dish.id }
+    ]
+    
+    const adjustedResult = applyManualAdjustments(result, adjustments, basicConstraints)
+    
+    expect(adjustedResult.dishes.length).toBe(originalLength - 1)
+    expect(adjustedResult.dishes.some(item => 
+      item.dish.id === dishToRemove.dish.id
+    )).toBe(false)
+  })
+
+  it('应该正确重新计算总价', () => {
+    const result = generateDishes(sampleDishes, basicConstraints)
+    const dishToReplace = result.dishes[0]!
+    const moreExpensiveDish = sampleDishes.find(dish => 
+      dish.price > dishToReplace.dish.price && dish.type === dishToReplace.dish.type
+    )
+    
+    if (!moreExpensiveDish) {
+      // 如果没有更贵的菜品，跳过这个测试
+      return
+    }
+    
+    const adjustments: ManualAdjustment[] = [
+      { type: 'replace', dishId: dishToReplace.dish.id, newDish: moreExpensiveDish }
+    ]
+    
+    const adjustedResult = applyManualAdjustments(result, adjustments, basicConstraints)
+    
+    const calculatedTotal = adjustedResult.dishes.reduce((sum, { totalPrice }) => 
+      sum + totalPrice, 0
+    )
+    
+    expect(adjustedResult.totalCost).toBe(calculatedTotal)
+    expect(adjustedResult.totalCost).toBeGreaterThan(result.totalCost)
+  })
+
+  it('应该处理无效的调整操作', () => {
+    const result = generateDishes(sampleDishes, basicConstraints)
+    
+    const adjustments: ManualAdjustment[] = [
+      { type: 'fix', dishId: 'nonexistent-id' },
+      { type: 'replace', dishId: 'another-nonexistent-id', newDish: sampleDishes[0]! }
+    ]
+    
+    // 不应该抛出错误
+    expect(() => {
+      applyManualAdjustments(result, adjustments, basicConstraints)
+    }).not.toThrow()
   })
 })

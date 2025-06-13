@@ -1,4 +1,4 @@
-import type { Dish, Constraints, GenerationResult } from '../types'
+import type { Dish, Constraints, GenerationResult, ManualAdjustment } from '../types'
 
 export function generateDishes(
   availableDishes: Dish[], 
@@ -56,12 +56,24 @@ export function generateDishes(
         break
       }
 
-      selectedDishes.push({
+      // 找到同类型的其他可选菜品作为替换选项
+      const alternatives = sortedDishes
+        .filter(altDish => altDish.id !== dish.id)
+        .slice(0, 3) // 最多3个替换选项
+
+      const dishItem: GenerationResult['dishes'][0] = {
         dish,
         quantity,
         totalPrice,
-        isFixed: false
-      })
+        isFixed: false,
+        canReplace: alternatives.length > 0
+      }
+      
+      if (alternatives.length > 0) {
+        dishItem.alternatives = alternatives
+      }
+      
+      selectedDishes.push(dishItem)
 
       totalCost += totalPrice
     }
@@ -78,6 +90,72 @@ export function generateDishes(
       satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
         type => selectedDishes.some(item => item.dish.type === type)
       ),
+      warnings
+    }
+  }
+}
+
+export function applyManualAdjustments(
+  result: GenerationResult,
+  adjustments: ManualAdjustment[],
+  constraints: Constraints
+): GenerationResult {
+  const adjustedDishes = [...result.dishes]
+  const warnings = [...result.metadata.warnings]
+
+  for (const adjustment of adjustments) {
+    const dishIndex = adjustedDishes.findIndex(item => item.dish.id === adjustment.dishId)
+    
+    if (dishIndex === -1) continue
+
+    switch (adjustment.type) {
+      case 'fix':
+        adjustedDishes[dishIndex] = {
+          ...adjustedDishes[dishIndex]!,
+          isFixed: true
+        }
+        break
+        
+      case 'replace':
+        if (adjustment.newDish) {
+          const quantity = adjustedDishes[dishIndex]!.quantity
+          const dishPrice = adjustment.newDish.scaleWithPeople 
+            ? adjustment.newDish.price * constraints.headcount 
+            : adjustment.newDish.price
+          const totalPrice = dishPrice * quantity
+
+          const newDishItem: GenerationResult['dishes'][0] = {
+            dish: adjustment.newDish,
+            quantity,
+            totalPrice,
+            isFixed: false,
+            canReplace: true
+          }
+          
+          if (adjustedDishes[dishIndex]!.alternatives) {
+            newDishItem.alternatives = adjustedDishes[dishIndex]!.alternatives
+          }
+          
+          adjustedDishes[dishIndex] = newDishItem
+        }
+        break
+        
+      case 'remove':
+        const removedDish = adjustedDishes[dishIndex]!
+        adjustedDishes.splice(dishIndex, 1)
+        warnings.push(`已移除菜品: ${removedDish.dish.name}`)
+        break
+    }
+  }
+
+  // 重新计算总价
+  const totalCost = adjustedDishes.reduce((sum, item) => sum + item.totalPrice, 0)
+
+  return {
+    dishes: adjustedDishes,
+    totalCost,
+    metadata: {
+      ...result.metadata,
       warnings
     }
   }

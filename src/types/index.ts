@@ -35,6 +35,8 @@ export interface GenerationResult {
     quantity: number;
     totalPrice: number;
     isFixed: boolean;
+    canReplace: boolean;
+    alternatives?: Dish[];
   }>;
   totalCost: number;
   metadata: {
@@ -43,6 +45,12 @@ export interface GenerationResult {
     satisfiedConstraints: string[];
     warnings: string[];
   };
+}
+
+export interface ManualAdjustment {
+  type: 'fix' | 'replace' | 'remove';
+  dishId: string;
+  newDish?: Dish;
 }
 
 export interface ParsedFileData {

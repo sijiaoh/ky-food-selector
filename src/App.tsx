@@ -2,10 +2,11 @@ import { useState } from 'react'
 import './App.css'
 import { FileUpload } from './components/features/file-upload'
 import { ConstraintsForm } from './components/features/constraints-form'
+import { ResultsActions } from './components/features/results-actions'
 import { parseExcelFile } from './services/excel-parser'
 import { downloadSampleFile } from './utils/sample-data'
-import { generateDishes } from './algorithms/dish-generator'
-import type { ParsedFileData, Constraints, GenerationResult } from './types'
+import { generateDishes, applyManualAdjustments } from './algorithms/dish-generator'
+import type { ParsedFileData, Constraints, GenerationResult, ManualAdjustment } from './types'
 
 function App() {
   const [parsedData, setParsedData] = useState<ParsedFileData | null>(null)
@@ -69,6 +70,24 @@ function App() {
       console.error('Generation error:', err)
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handleApplyAdjustments = (adjustments: ManualAdjustment[]) => {
+    if (!generationResult) return
+
+    try {
+      const adjustedResult = applyManualAdjustments(generationResult, adjustments, constraints)
+      setGenerationResult(adjustedResult)
+      
+      if (adjustedResult.metadata.warnings.length > generationResult.metadata.warnings.length) {
+        setError(`调整完成，但有新的警告`)
+      } else {
+        setError(null)
+      }
+    } catch (err) {
+      setError('应用调整失败，请重试')
+      console.error('Adjustment error:', err)
     }
   }
 
@@ -228,36 +247,6 @@ function App() {
               </div>
             </div>
 
-            <div className="dishes-result">
-              <h3>选中菜品</h3>
-              <div className="dishes-table-container">
-                <table className="dishes-table">
-                  <thead>
-                    <tr>
-                      <th>菜名</th>
-                      <th>类型</th>
-                      <th>数量</th>
-                      <th>单价</th>
-                      <th>总价</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generationResult.dishes.map(({ dish, quantity, totalPrice }) => (
-                      <tr key={dish.id}>
-                        <td className="dish-name">{dish.name}</td>
-                        <td className="dish-type">{dish.type}</td>
-                        <td className="dish-quantity">{quantity}</td>
-                        <td className="dish-price">
-                          ¥{dish.scaleWithPeople ? `${dish.price} × ${constraints.headcount}人` : dish.price}
-                        </td>
-                        <td className="dish-total">¥{totalPrice}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
             {generationResult.metadata.warnings.length > 0 && (
               <div className="warnings-section">
                 <h4>生成警告</h4>
@@ -266,6 +255,13 @@ function App() {
                 ))}
               </div>
             )}
+
+            <ResultsActions
+              result={generationResult}
+              constraints={constraints}
+              onRegenerate={handleGenerateDishes}
+              onApplyAdjustments={handleApplyAdjustments}
+            />
           </section>
         )}
       </main>
