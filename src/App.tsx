@@ -129,7 +129,7 @@ function App() {
 
         {parsedData && (
           <section className="data-section">
-            <h2>2. 数据概览</h2>
+            <h2>2. 菜单</h2>
             <div className="data-summary">
               <div className="summary-item">
                 <span className="label">总行数:</span>
@@ -147,44 +147,39 @@ function App() {
 
             {parsedData.dishes.length > 0 && (
               <div className="dishes-preview">
-                <h3>菜品列表</h3>
-                <div className="dishes-table-container">
-                  <table className="dishes-table">
-                    <thead>
-                      <tr>
-                        <th>菜名</th>
-                        <th>价格</th>
-                        <th>类型</th>
-                        <th>温度</th>
-                        <th>荤素</th>
-                        <th>标签</th>
-                        <th>基础个数</th>
-                        <th>根据人数加量</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parsedData.dishes.map((dish) => (
-                        <tr key={dish.id}>
-                          <td className="dish-name">{dish.name}</td>
-                          <td className="dish-price">¥{dish.price}</td>
-                          <td className="dish-type">{dish.type}</td>
-                          <td className="dish-temperature">{dish.temperature || '-'}</td>
-                          <td className="dish-meat">{dish.meatType || '-'}</td>
-                          <td className="dish-tags">
-                            {dish.tags.length > 0 ? (
-                              <div className="tags-container">
-                                {dish.tags.map((tag, index) => (
-                                  <span key={index} className="tag">{tag}</span>
-                                ))}
-                              </div>
-                            ) : '-'}
-                          </td>
-                          <td className="dish-quantity">{dish.baseQuantity}</td>
-                          <td className="dish-scale">{dish.scaleWithPeople ? '是' : '否'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <h3>菜品列表 ({parsedData.dishes.length}道菜)</h3>
+                <div className="dishes-grid">
+                  {parsedData.dishes.map((dish) => (
+                    <div key={dish.id} className="dish-card">
+                      <div className="dish-card-header">
+                        <h4 className="dish-card-name">{dish.name}</h4>
+                        <span className="dish-card-price">¥{dish.price}</span>
+                      </div>
+                      <div className="dish-card-content">
+                        <div className="dish-card-row">
+                          <span className="dish-card-label">类型:</span>
+                          <span className="dish-card-value dish-type-badge">{dish.type}</span>
+                        </div>
+                        <div className="dish-card-row">
+                          <span className="dish-card-label">数量:</span>
+                          <span className="dish-card-value">{dish.baseQuantity}{dish.scaleWithPeople ? ' (按人数加量)' : ''}</span>
+                        </div>
+                        {(dish.temperature || dish.meatType) && (
+                          <div className="dish-card-row">
+                            {dish.temperature && <span className="dish-card-badge temp-badge">{dish.temperature}</span>}
+                            {dish.meatType && <span className="dish-card-badge meat-badge">{dish.meatType}</span>}
+                          </div>
+                        )}
+                        {dish.tags.length > 0 && (
+                          <div className="dish-card-tags">
+                            {dish.tags.map((tag, index) => (
+                              <span key={index} className="dish-card-tag">{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
