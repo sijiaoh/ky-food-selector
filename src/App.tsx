@@ -151,25 +151,29 @@ function App() {
                 <div className="dishes-compact-list">
                   {parsedData.dishes.map((dish) => (
                     <div key={dish.id} className="dish-item-single">
-                      <span className="dish-name-single">{dish.name}</span>
-                      <span className="dish-price-single">¥{dish.price}</span>
-                      <span className="dish-type-single">{dish.type}</span>
-                      {(dish.baseQuantity > 1 || dish.scaleWithPeople) && (
-                        <span className="dish-quantity-single">
-                          {dish.scaleWithPeople ? dish.baseQuantity : (dish.baseQuantity > 1 ? dish.baseQuantity : '')}
-                          {dish.scaleWithPeople && '↗'}
-                        </span>
-                      )}
-                      {dish.temperature && <span className="dish-attr-single">{dish.temperature}</span>}
-                      {dish.meatType && <span className="dish-attr-single">{dish.meatType}</span>}
-                      {dish.tags.length > 0 && (
-                        <div className="dish-tags-single">
-                          {dish.tags.slice(0, 2).map((tag, index) => (
-                            <span key={index} className="dish-tag-single">{tag}</span>
-                          ))}
-                          {dish.tags.length > 2 && <span className="dish-tag-more-single">+{dish.tags.length - 2}</span>}
-                        </div>
-                      )}
+                      <div className="dish-main-info">
+                        <span className="dish-name-single">{dish.name}</span>
+                        <span className="dish-price-single">¥{dish.price}</span>
+                      </div>
+                      <div className="dish-details-info">
+                        <span className="dish-type-single">{dish.type}</span>
+                        {(dish.baseQuantity > 1 || dish.scaleWithPeople) && (
+                          <span className="dish-quantity-single">
+                            {dish.scaleWithPeople ? dish.baseQuantity : (dish.baseQuantity > 1 ? dish.baseQuantity : '')}
+                            {dish.scaleWithPeople && '↗'}
+                          </span>
+                        )}
+                        {dish.temperature && <span className="dish-attr-single">{dish.temperature}</span>}
+                        {dish.meatType && <span className="dish-attr-single">{dish.meatType}</span>}
+                        {dish.tags.length > 0 && (
+                          <div className="dish-tags-single">
+                            {dish.tags.slice(0, 2).map((tag, index) => (
+                              <span key={index} className="dish-tag-single">{tag}</span>
+                            ))}
+                            {dish.tags.length > 2 && <span className="dish-tag-more-single">+{dish.tags.length - 2}</span>}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
