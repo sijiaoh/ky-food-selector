@@ -4,9 +4,9 @@
 
 ## 文档列表
 
+- [项目概况](PROJECT_OVERVIEW.md) - 开发进度和技术决策
 - [功能规范](feature-specifications.md) - 详细的功能需求和测试用例
 - [架构设计](../CLAUDE.md) - 技术栈和开发规范
-- [项目概况](../PROJECT_OVERVIEW.md) - 开发进度和技术决策
 
 ## 文档分类说明
 
