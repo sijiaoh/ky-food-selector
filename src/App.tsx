@@ -1,14 +1,30 @@
 import { useState } from 'react'
 import './App.css'
 import { FileUpload } from './components/features/file-upload'
+import { ConstraintsForm } from './components/features/constraints-form'
 import { parseExcelFile } from './services/excel-parser'
 import { downloadSampleFile } from './utils/sample-data'
-import type { ParsedFileData } from './types'
+import type { ParsedFileData, Constraints } from './types'
 
 function App() {
   const [parsedData, setParsedData] = useState<ParsedFileData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [constraints, setConstraints] = useState<Constraints>({
+    headcount: 4,
+    budget: 200,
+    typeDistribution: {
+      '主食': 1,
+      '主菜': 2,
+      '副菜': 1,
+      '汤': 1,
+      '点心': 0
+    },
+    temperatureDistribution: {},
+    meatDistribution: {},
+    tagRequirements: {},
+    excludedTags: []
+  })
 
   const handleFileSelect = async (file: File) => {
     setLoading(true)
@@ -43,7 +59,7 @@ function App() {
             <p className="upload-description">
               请上传包含菜品信息的CSV或Excel文件。文件应包含：菜名、价格、类型、温度、荤素、标签、基础个数、根据人数加量等字段。
               <br />
-              <strong>标签支持空格或逗号分隔</strong>，例如："猪肉 红烧 下饭"或"豆腐,川菜,素食"。
+              <strong>标签支持空格或逗号分隔</strong>，例如：&ldquo;猪肉 红烧 下饭&rdquo;或&ldquo;豆腐,川菜,素食&rdquo;。
               <br />
               <strong>温度、荤素等字段可以留空</strong>，系统会自动处理为可选属性。
             </p>
@@ -150,7 +166,10 @@ function App() {
         {parsedData && parsedData.dishes.length > 0 && (
           <section className="constraints-section">
             <h2>3. 设置约束条件</h2>
-            <p>约束条件配置功能正在开发中...</p>
+            <ConstraintsForm 
+              constraints={constraints} 
+              onChange={setConstraints}
+            />
           </section>
         )}
       </main>

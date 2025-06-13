@@ -1,0 +1,183 @@
+.constraints-form {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid #dee2e6;
+}
+
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.form-section:last-child {
+  margin-bottom: 0;
+}
+
+.form-section h3 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-bottom: 2px solid #f8f9fa;
+  padding-bottom: 0.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.form-field:last-child {
+  margin-bottom: 0;
+}
+
+.form-field label {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.form-field input {
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-field input:invalid {
+  border-color: #dc3545;
+}
+
+.form-field .error {
+  color: #dc3545;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+/* 预设配置 */
+.presets-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.preset-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.preset-button:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.save-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.save-button:hover {
+  background: #1e7e34;
+  transform: translateY(-1px);
+}
+
+/* 菜品类型搭配网格布局 */
+.form-section:nth-child(3) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form-section:nth-child(3) h3 {
+  grid-column: 1 / -1;
+  margin-bottom: 1rem;
+}
+
+.form-section:nth-child(3) .form-field {
+  margin-bottom: 0;
+}
+
+.summary-info {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.dish-count {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: #007bff;
+}
+
+.budget-suggestion {
+  margin: 0;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+/* 警告提示 */
+.warnings-section {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.warnings-section h4 {
+  margin: 0 0 0.5rem 0;
+  color: #856404;
+  font-size: 1rem;
+}
+
+.warning {
+  color: #856404;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.warning:last-child {
+  margin-bottom: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .constraints-form {
+    padding: 1.5rem;
+  }
+  
+  .form-section:last-child {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-field input {
+    padding: 0.6rem;
+  }
+}
