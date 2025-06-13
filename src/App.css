@@ -854,3 +854,38 @@
     padding: 0.05rem 0.2rem;
   }
 }
+
+/* 页脚版本信息 */
+.App-footer {
+  margin-top: 3rem;
+  padding: 1rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.version-info {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.refresh-cache-btn {
+  background: none;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6c757d;
+}
+
+.refresh-cache-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  transform: rotate(180deg);
+}

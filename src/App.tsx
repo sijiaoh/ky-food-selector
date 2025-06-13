@@ -250,6 +250,40 @@ function App() {
           </section>
         )}
       </main>
+      
+      <footer className="App-footer">
+        <div className="version-info">
+          版本 v{import.meta.env.PACKAGE_VERSION || '1.1.0'} • 构建时间 {new Date(import.meta.env.BUILD_TIME || new Date()).toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+          <button 
+            className="refresh-cache-btn"
+            onClick={() => {
+              // 强制刷新缓存
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                  registrations.forEach(registration => registration.unregister())
+                })
+              }
+              // 清除所有缓存
+              if ('caches' in window) {
+                caches.keys().then(names => {
+                  names.forEach(name => caches.delete(name))
+                })
+              }
+              // 强制刷新页面
+              window.location.reload()
+            }}
+            title="清除缓存并刷新"
+          >
+            🔄
+          </button>
+        </div>
+      </footer>
     </div>
   )
 }
