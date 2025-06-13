@@ -156,7 +156,7 @@ function App() {
                       <span className="dish-type-single">{dish.type}</span>
                       {(dish.baseQuantity > 1 || dish.scaleWithPeople) && (
                         <span className="dish-quantity-single">
-                          {dish.baseQuantity > 1 ? dish.baseQuantity : ''}
+                          {dish.scaleWithPeople ? dish.baseQuantity : (dish.baseQuantity > 1 ? dish.baseQuantity : '')}
                           {dish.scaleWithPeople && '↗'}
                         </span>
                       )}
