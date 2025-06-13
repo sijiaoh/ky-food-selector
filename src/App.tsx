@@ -4,12 +4,15 @@ import { FileUpload } from './components/features/file-upload'
 import { ConstraintsForm } from './components/features/constraints-form'
 import { parseExcelFile } from './services/excel-parser'
 import { downloadSampleFile } from './utils/sample-data'
-import type { ParsedFileData, Constraints } from './types'
+import { generateDishes } from './algorithms/dish-generator'
+import type { ParsedFileData, Constraints, GenerationResult } from './types'
 
 function App() {
   const [parsedData, setParsedData] = useState<ParsedFileData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null)
   const [constraints, setConstraints] = useState<Constraints>({
     headcount: 4,
     budget: 200,
@@ -42,6 +45,30 @@ function App() {
       console.error('File parsing error:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGenerateDishes = async () => {
+    if (!parsedData?.dishes.length) return
+
+    setGenerating(true)
+    setError(null)
+
+    try {
+      // 添加小延迟让用户看到加载状态
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const result = generateDishes(parsedData.dishes, constraints)
+      setGenerationResult(result)
+      
+      if (result.metadata.warnings.length > 0) {
+        setError(`生成完成，但有 ${result.metadata.warnings.length} 个警告`)
+      }
+    } catch (err) {
+      setError('菜品生成失败，请检查约束条件')
+      console.error('Generation error:', err)
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -170,6 +197,75 @@ function App() {
               constraints={constraints} 
               onChange={setConstraints}
             />
+            
+            <div className="generate-section">
+              <button 
+                className="generate-button"
+                onClick={handleGenerateDishes}
+                disabled={generating}
+              >
+                {generating ? '生成中...' : '🎯 生成菜品'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {generationResult && (
+          <section className="results-section">
+            <h2>4. 生成结果</h2>
+            <div className="result-summary">
+              <div className="summary-item">
+                <span className="label">菜品总数:</span>
+                <span className="value">{generationResult.dishes.length}</span>
+              </div>
+              <div className="summary-item">
+                <span className="label">总价格:</span>
+                <span className="value">¥{generationResult.totalCost}</span>
+              </div>
+              <div className="summary-item">
+                <span className="label">生成时间:</span>
+                <span className="value">{generationResult.metadata.generationTime}ms</span>
+              </div>
+            </div>
+
+            <div className="dishes-result">
+              <h3>选中菜品</h3>
+              <div className="dishes-table-container">
+                <table className="dishes-table">
+                  <thead>
+                    <tr>
+                      <th>菜名</th>
+                      <th>类型</th>
+                      <th>数量</th>
+                      <th>单价</th>
+                      <th>总价</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generationResult.dishes.map(({ dish, quantity, totalPrice }) => (
+                      <tr key={dish.id}>
+                        <td className="dish-name">{dish.name}</td>
+                        <td className="dish-type">{dish.type}</td>
+                        <td className="dish-quantity">{quantity}</td>
+                        <td className="dish-price">
+                          ¥{dish.scaleWithPeople ? `${dish.price} × ${constraints.headcount}人` : dish.price}
+                        </td>
+                        <td className="dish-total">¥{totalPrice}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {generationResult.metadata.warnings.length > 0 && (
+              <div className="warnings-section">
+                <h4>生成警告</h4>
+                {generationResult.metadata.warnings.map((warning, index) => (
+                  <div key={index} className="warning">{warning}</div>
+                ))}
+              </div>
+            )}
           </section>
         )}
       </main>

@@ -325,6 +325,73 @@
   color: #333;
 }
 
+/* 生成按钮区域 */
+.generate-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #f8f9fa;
+  text-align: center;
+}
+
+.generate-button {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.generate-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+.generate-button:active {
+  transform: translateY(0);
+}
+
+.generate-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 结果区域 */
+.results-section {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid #dee2e6;
+}
+
+.results-section h2 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.result-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.dishes-result h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.dish-total {
+  font-weight: bold;
+  color: #dc3545;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .App {
@@ -341,8 +408,18 @@
 
   .upload-section,
   .data-section,
-  .constraints-section {
+  .constraints-section,
+  .results-section {
     padding: 1.5rem;
+  }
+
+  .generate-button {
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+  }
+
+  .result-summary {
+    grid-template-columns: 1fr;
   }
 
   .file-upload {
