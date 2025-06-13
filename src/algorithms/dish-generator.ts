@@ -69,7 +69,7 @@ export function generateDishes(
 
   // 先处理用户明确指定数量的菜品类型
   for (const [type, requestedCount] of Object.entries(constraints.typeDistribution)) {
-    if (requestedCount <= 0) continue
+    if (requestedCount <= 0 && requestedCount !== -1) continue
 
     const availableForType = dishesByType[type as Dish['type']] || []
     
@@ -78,11 +78,23 @@ export function generateDishes(
       continue
     }
 
-    // 选择最多可选的菜品数量
-    const actualCount = Math.min(requestedCount, availableForType.length)
-    
-    if (actualCount < requestedCount) {
-      warnings.push(`${type}菜品数量不足，请求${requestedCount}个，仅能提供${actualCount}个`)
+    // 处理自动安排(-1)的情况
+    let actualCount: number
+    if (requestedCount === -1) {
+      // 自动安排：根据预算和可用菜品智能选择数量（1-3个）
+      const maxAffordable = Math.floor((constraints.budget * 0.3) / 20) // 假设平均每道菜20元，最多用30%预算
+      actualCount = Math.min(
+        Math.max(1, Math.min(3, maxAffordable)), // 最少1个，最多3个
+        availableForType.length
+      )
+      warnings.push(`自动为${type}安排了${actualCount}个菜品`)
+    } else {
+      // 用户明确指定数量
+      actualCount = Math.min(requestedCount, availableForType.length)
+      
+      if (actualCount < requestedCount) {
+        warnings.push(`${type}菜品数量不足，请求${requestedCount}个，仅能提供${actualCount}个`)
+      }
     }
 
     // 使用工具函数进行智能随机选择
@@ -92,8 +104,9 @@ export function generateDishes(
       const dish = getRandomDish()
       if (!dish) continue // 跳过undefined
       
-      const quantity = dish.baseQuantity
-      const dishPrice = dish.scaleWithPeople ? dish.price * constraints.headcount : dish.price
+      // 计算实际数量：如果需要根据人数加量，数量为基础个数×人数；否则为基础个数
+      const quantity = dish.scaleWithPeople ? dish.baseQuantity * constraints.headcount : dish.baseQuantity
+      const dishPrice = dish.price // 保持单价不变
       const totalPrice = dishPrice * quantity
 
       // 检查预算
@@ -136,6 +149,11 @@ export function generateDishes(
     const allTypes = Object.keys(dishesByType) as Dish['type'][]
     const unspecifiedTypes = allTypes.filter(type => !specifiedTypes.has(type))
     
+    // 对于值为-1的类型，也视为未完全指定（可以继续添加）
+    const autoArrangeTypes = Object.entries(constraints.typeDistribution)
+      .filter(([_, count]) => count === -1)
+      .map(([type]) => type as Dish['type'])
+    
     // 创建候选菜品池：包括未指定类型的菜品 + 已指定类型的额外菜品
     const candidatePool: Array<{ dish: Dish; type: Dish['type']; isExtra: boolean }> = []
     
@@ -147,22 +165,37 @@ export function generateDishes(
       })
     })
     
-    // 添加已指定类型的额外菜品（可以超出用户指定的数量）
-    Object.keys(constraints.typeDistribution).forEach(type => {
-      const dishes = dishesByType[type as Dish['type']] || []
+    // 添加自动安排类型的额外菜品（-1值的类型可以继续添加）
+    autoArrangeTypes.forEach(type => {
+      const dishes = dishesByType[type] || []
       const alreadySelected = selectedDishes.filter(item => item.dish.type === type).map(item => item.dish.id)
       dishes
         .filter(dish => !alreadySelected.includes(dish.id))
         .forEach(dish => {
-          candidatePool.push({ dish, type: type as Dish['type'], isExtra: true })
+          candidatePool.push({ dish, type, isExtra: true })
         })
     })
     
-    // 按价格排序候选菜品
+    // 添加已指定类型的额外菜品（可以超出用户指定的数量）
+    Object.entries(constraints.typeDistribution)
+      .filter(([_, count]) => count > 0) // 只处理明确指定数量的类型
+      .forEach(([type]) => {
+        const dishes = dishesByType[type as Dish['type']] || []
+        const alreadySelected = selectedDishes.filter(item => item.dish.type === type).map(item => item.dish.id)
+        dishes
+          .filter(dish => !alreadySelected.includes(dish.id))
+          .forEach(dish => {
+            candidatePool.push({ dish, type: type as Dish['type'], isExtra: true })
+          })
+      })
+    
+    // 按价格排序候选菜品（考虑实际数量）
     candidatePool.sort((a, b) => {
-      const priceA = a.dish.scaleWithPeople ? a.dish.price * constraints.headcount : a.dish.price
-      const priceB = b.dish.scaleWithPeople ? b.dish.price * constraints.headcount : b.dish.price
-      return priceA - priceB
+      const quantityA = a.dish.scaleWithPeople ? a.dish.baseQuantity * constraints.headcount : a.dish.baseQuantity
+      const quantityB = b.dish.scaleWithPeople ? b.dish.baseQuantity * constraints.headcount : b.dish.baseQuantity
+      const totalPriceA = a.dish.price * quantityA
+      const totalPriceB = b.dish.price * quantityB
+      return totalPriceA - totalPriceB
     })
     
     // 使用贪心算法填充预算：优先选择能让总价最接近目标的菜品
@@ -173,10 +206,11 @@ export function generateDishes(
       // 寻找最佳候选菜品（让总价最接近目标预算的菜品）
       for (let i = 0; i < candidatePool.length; i++) {
         const candidate = candidatePool[i]!
-        const dishPrice = candidate.dish.scaleWithPeople 
-          ? candidate.dish.price * constraints.headcount 
-          : candidate.dish.price
-        const newTotalCost = totalCost + dishPrice
+        const quantity = candidate.dish.scaleWithPeople 
+          ? candidate.dish.baseQuantity * constraints.headcount 
+          : candidate.dish.baseQuantity
+        const dishTotalPrice = candidate.dish.price * quantity
+        const newTotalCost = totalCost + dishTotalPrice
         
         // 不能超过最大预算
         if (newTotalCost > maxBudget) continue
@@ -194,8 +228,8 @@ export function generateDishes(
       // 如果找到了合适的候选菜品，添加它
       if (bestCandidate) {
         const dish = bestCandidate.dish
-        const quantity = dish.baseQuantity
-        const dishPrice = dish.scaleWithPeople ? dish.price * constraints.headcount : dish.price
+        const quantity = dish.scaleWithPeople ? dish.baseQuantity * constraints.headcount : dish.baseQuantity
+        const dishPrice = dish.price
         const totalPrice = dishPrice * quantity
         
         // 获取同类型菜品作为替换选项
@@ -253,7 +287,7 @@ export function generateDishes(
     totalCost,
     metadata: {
       generationTime,
-      algorithmVersion: 'v1.3.0-budget',
+      algorithmVersion: 'v1.4.0-autofix',
       satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
         type => selectedDishes.some(item => item.dish.type === type)
       ),
@@ -285,10 +319,10 @@ export function applyManualAdjustments(
         
       case 'replace':
         if (adjustment.newDish) {
-          const quantity = adjustedDishes[dishIndex]!.quantity
-          const dishPrice = adjustment.newDish.scaleWithPeople 
-            ? adjustment.newDish.price * constraints.headcount 
-            : adjustment.newDish.price
+          const quantity = adjustment.newDish.scaleWithPeople 
+            ? adjustment.newDish.baseQuantity * constraints.headcount 
+            : adjustment.newDish.baseQuantity
+          const dishPrice = adjustment.newDish.price
           const totalPrice = dishPrice * quantity
 
           const newDishItem: GenerationResult['dishes'][0] = {
@@ -307,11 +341,12 @@ export function applyManualAdjustments(
         }
         break
         
-      case 'remove':
+      case 'remove': {
         const removedDish = adjustedDishes[dishIndex]!
         adjustedDishes.splice(dishIndex, 1)
         warnings.push(`已移除菜品: ${removedDish.dish.name}`)
         break
+      }
     }
   }
 

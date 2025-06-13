@@ -1,16 +1,14 @@
 import { useState } from 'react'
-import type { GenerationResult, ManualAdjustment, Dish, Constraints } from '../../types'
+import type { GenerationResult, ManualAdjustment, Dish } from '../../types'
 
 interface ResultsActionsProps {
   result: GenerationResult
-  constraints: Constraints
   onRegenerate: () => void
   onApplyAdjustments: (adjustments: ManualAdjustment[]) => void
 }
 
 export function ResultsActions({ 
   result, 
-  constraints, 
   onRegenerate, 
   onApplyAdjustments 
 }: ResultsActionsProps) {
@@ -136,9 +134,7 @@ export function ResultsActions({
                     </td>
                     <td className="dish-type">{displayDish.type}</td>
                     <td className="dish-quantity">{quantity}</td>
-                    <td className="dish-price">
-                      ¥{displayDish.scaleWithPeople ? `${displayDish.price} × ${constraints.headcount}人` : displayDish.price}
-                    </td>
+                    <td className="dish-price">¥{displayDish.price}</td>
                     <td className="dish-total">¥{totalPrice}</td>
                     <td className="dish-actions">
                       {!removed && (

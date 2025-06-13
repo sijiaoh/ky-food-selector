@@ -116,8 +116,8 @@ describe('菜品生成算法', () => {
     const result = generateDishes(sampleDishes, basicConstraints)
     
     const calculatedTotal = result.dishes.reduce((sum, { dish, quantity }) => {
-      const price = dish.scaleWithPeople ? dish.price * basicConstraints.headcount : dish.price
-      return sum + (price * quantity)
+      // 新的计算逻辑：总价 = 单价 × 实际数量
+      return sum + (dish.price * quantity)
     }, 0)
     
     expect(result.totalCost).toBe(calculatedTotal)
@@ -183,12 +183,14 @@ describe('菜品生成算法', () => {
     const result = generateDishes(sampleDishes, basicConstraints)
     
     result.dishes.forEach(({ dish, quantity, totalPrice }) => {
-      expect(quantity).toBeGreaterThanOrEqual(dish.baseQuantity)
+      // 新的逻辑：数量已经是实际数量（考虑了人数）
+      const expectedQuantity = dish.scaleWithPeople 
+        ? dish.baseQuantity * basicConstraints.headcount 
+        : dish.baseQuantity
+      expect(quantity).toBe(expectedQuantity)
       
-      const expectedPrice = dish.scaleWithPeople 
-        ? dish.price * basicConstraints.headcount * quantity
-        : dish.price * quantity
-        
+      // 总价 = 单价 × 实际数量
+      const expectedPrice = dish.price * quantity
       expect(totalPrice).toBe(expectedPrice)
     })
   })
@@ -390,6 +392,51 @@ describe('菜品生成算法', () => {
 
     // 验证在预算范围内
     expect(result.totalCost).toBeLessThanOrEqual(partialConstraints.budget)
+  })
+
+  it('应该正确处理-1值的自动安排', () => {
+    // 测试-1值（空输入）应该自动安排一些菜品，而不是0个
+    const autoArrangeConstraints: Constraints = {
+      headcount: 4,
+      budget: 150,
+      typeDistribution: {
+        '主食': 1,
+        '主菜': -1, // 空值，应该自动安排
+        '副菜': -1, // 空值，应该自动安排
+        '汤': 0,   // 明确不要
+        '点心': 0  // 明确不要
+      },
+      temperatureDistribution: {},
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+
+    const result = generateDishes(sampleDishes, autoArrangeConstraints)
+
+    // 验证结果包含指定的主食
+    const selectedTypes = result.dishes.map(item => item.dish.type)
+    expect(selectedTypes).toContain('主食')
+
+    // 验证自动安排的类型有菜品（不是0个）
+    const mainDishCount = selectedTypes.filter(type => type === '主菜').length
+    const sideDishCount = selectedTypes.filter(type => type === '副菜').length
+    
+    expect(mainDishCount).toBeGreaterThan(0) // 应该自动安排了主菜
+    expect(sideDishCount).toBeGreaterThan(0) // 应该自动安排了副菜
+
+    // 验证不包含明确设为0的类型
+    expect(selectedTypes).not.toContain('汤')
+    expect(selectedTypes).not.toContain('点心')
+
+    // 验证有相关的自动安排警告
+    const autoWarnings = result.metadata.warnings.filter(warning => 
+      warning.includes('自动为') && warning.includes('安排了')
+    )
+    expect(autoWarnings.length).toBeGreaterThan(0)
+
+    // 验证在预算范围内
+    expect(result.totalCost).toBeLessThanOrEqual(autoArrangeConstraints.budget)
   })
 
   it('应该充分利用预算，达到90-100%预算利用率', () => {

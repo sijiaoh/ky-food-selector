@@ -117,8 +117,11 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
       ...constraints.typeDistribution
     }
     
-    if (value === undefined || value === 0) {
-      // 空值或0时，从约束中删除该类型，让算法自动安排
+    if (value === undefined) {
+      // 空值时，使用-1表示"自动安排"
+      newTypeDistribution[type] = -1
+    } else if (value === 0) {
+      // 明确填写0表示"不要这种类型"
       delete newTypeDistribution[type]
     } else {
       newTypeDistribution[type] = value
@@ -209,7 +212,11 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
               type="number"
               min="0"
               placeholder="自动"
-              value={constraints.typeDistribution[type] || ''}
+              value={(() => {
+                const val = constraints.typeDistribution[type]
+                if (val === undefined || val === -1) return ''
+                return val
+              })()}
               onChange={(e) => {
                 const value = e.target.value
                 if (value === '') {

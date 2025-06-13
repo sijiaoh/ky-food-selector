@@ -258,7 +258,6 @@ function App() {
 
             <ResultsActions
               result={generationResult}
-              constraints={constraints}
               onRegenerate={handleGenerateDishes}
               onApplyAdjustments={handleApplyAdjustments}
             />
