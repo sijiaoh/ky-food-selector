@@ -33,10 +33,14 @@ src/
 ├── types/              # 类型定义 (完整的Dish, Constraints等)
 └── constants/          # 常量配置
 
-docs/
-├── index.md                    # 主需求文档
-├── menu_excel_example.md       # 菜单示例
-├── preset-configurations.md    # 预设配置功能说明
+docs/                           # 用户文档（简洁）
+├── README.md                   # 文档导航
+├── index.md                    # 主要功能说明
+├── menu_excel_example.md       # 菜单格式示例
+└── preset-configurations.md    # 预设配置使用指南
+
+dev-docs/                       # 开发者文档（详细）
+├── README.md                   # 开发文档导航
 └── feature-specifications.md   # 功能规范和测试用例
 ```
 
