@@ -94,11 +94,15 @@ describe('菜品生成算法', () => {
       return acc
     }, {} as Record<string, number>)
     
+    // 验证用户明确指定的类型数量
     expect(typeCount['主食']).toBe(1)
     expect(typeCount['主菜']).toBe(1) // 只有一个主菜可选
     expect(typeCount['副菜']).toBe(1)
     expect(typeCount['汤']).toBe(1)
-    expect(typeCount['点心'] || 0).toBe(0)
+    
+    // 点心没有指定数量(为0)，但新算法可能为了利用预算而自动添加
+    // 所以这里只验证不超过可用数量
+    expect(typeCount['点心'] || 0).toBeLessThanOrEqual(1) // 最多1个点心可选
   })
 
   it('应该在预算范围内', () => {
@@ -297,7 +301,7 @@ describe('菜品生成算法', () => {
 
     const strategyConstraints: Constraints = {
       headcount: 4,
-      budget: 300, // 充足预算
+      budget: 120, // 较紧的预算，迫使算法优先选择便宜菜品
       typeDistribution: { '主菜': 5 }, // 要求5个主菜
       temperatureDistribution: {},
       meatDistribution: {},
@@ -330,12 +334,13 @@ describe('菜品生成算法', () => {
     const midRatio = midCount / totalDishes
     const expensiveRatio = expensiveCount / totalDishes
 
-    // 验证价格策略：便宜菜应该占大部分（至少50%），昂贵菜应该很少（不超过20%）
-    expect(cheapRatio).toBeGreaterThan(0.5) // 便宜菜 > 50%
-    expect(expensiveRatio).toBeLessThan(0.2) // 昂贵菜 < 20%
+    // 验证价格策略：便宜菜应该占相对大部分，昂贵菜应该很少
+    // 注意：新算法会积极利用预算，所以比例可能与纯贪心算法不同
+    expect(cheapRatio).toBeGreaterThan(0.4) // 便宜菜 > 40%（调整期望）
+    expect(expensiveRatio).toBeLessThan(0.3) // 昂贵菜 < 30%
     
     // 确保有一定的多样性（不是100%都选便宜菜）
-    expect(midRatio + expensiveRatio).toBeGreaterThan(0.1) // 中高档菜至少10%
+    expect(midRatio + expensiveRatio).toBeGreaterThan(0.3) // 中高档菜至少30%
   })
 
   it('应该支持空值类型自动安排', () => {
@@ -385,6 +390,57 @@ describe('菜品生成算法', () => {
 
     // 验证在预算范围内
     expect(result.totalCost).toBeLessThanOrEqual(partialConstraints.budget)
+  })
+
+  it('应该充分利用预算，达到90-100%预算利用率', () => {
+    // 创建充足的菜品选择
+    const abundantDishes: Dish[] = [
+      { id: '1', name: '米饭', price: 3, type: '主食', tags: [], baseQuantity: 1, scaleWithPeople: true },
+      { id: '2', name: '面条', price: 5, type: '主食', tags: [], baseQuantity: 1, scaleWithPeople: true },
+      
+      { id: '3', name: '红烧肉', price: 25, type: '主菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      { id: '4', name: '宫保鸡丁', price: 28, type: '主菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      { id: '5', name: '糖醋里脊', price: 32, type: '主菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      
+      { id: '6', name: '凉拌黄瓜', price: 8, type: '副菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      { id: '7', name: '清炒时蔬', price: 12, type: '副菜', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      
+      { id: '8', name: '紫菜蛋花汤', price: 15, type: '汤', tags: [], baseQuantity: 1, scaleWithPeople: true },
+      { id: '9', name: '冬瓜汤', price: 12, type: '汤', tags: [], baseQuantity: 1, scaleWithPeople: true },
+      
+      { id: '10', name: '绿豆沙', price: 8, type: '点心', tags: [], baseQuantity: 1, scaleWithPeople: false },
+      { id: '11', name: '红豆沙', price: 8, type: '点心', tags: [], baseQuantity: 1, scaleWithPeople: false }
+    ]
+
+    const budgetOptimizationConstraints: Constraints = {
+      headcount: 4,
+      budget: 200, // 充足预算
+      typeDistribution: {
+        '主食': 1,
+        '主菜': 1
+        // 其他类型留空，让算法优化预算利用率
+      },
+      temperatureDistribution: {},
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+
+    const result = generateDishes(abundantDishes, budgetOptimizationConstraints)
+
+    // 验证预算利用率达到90%以上
+    const budgetUtilization = (result.totalCost / budgetOptimizationConstraints.budget) * 100
+    expect(budgetUtilization).toBeGreaterThanOrEqual(90)
+    expect(result.totalCost).toBeLessThanOrEqual(budgetOptimizationConstraints.budget)
+
+    // 应该有预算利用率相关的提示信息
+    const utilizationWarnings = result.metadata.warnings.filter(warning => 
+      warning.includes('预算利用率') || warning.includes('额外添加')
+    )
+    expect(utilizationWarnings.length).toBeGreaterThan(0)
+
+    // 验证添加了额外菜品
+    expect(result.dishes.length).toBeGreaterThan(2) // 应该超过最初指定的2个菜品
   })
 })
 

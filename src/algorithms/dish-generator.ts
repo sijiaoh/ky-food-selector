@@ -126,36 +126,83 @@ export function generateDishes(
     }
   }
 
-  // 自动安排未指定数量的菜品类型
-  const specifiedTypes = new Set(Object.keys(constraints.typeDistribution))
-  const allTypes = Object.keys(dishesByType) as Dish['type'][]
-  const unspecifiedTypes = allTypes.filter(type => !specifiedTypes.has(type))
+  // 智能预算优化：尽量使用90-100%的预算
+  const targetBudget = constraints.budget * 0.9 // 目标预算：90%
+  const maxBudget = constraints.budget // 最大预算：100%
   
-  // 为未指定的类型自动安排菜品，但需要考虑剩余预算
-  const remainingBudget = constraints.budget - totalCost
-  if (remainingBudget > 0 && unspecifiedTypes.length > 0) {
-    // 随机选择1-2个未指定的类型进行自动安排
-    const typesToAdd = shuffleArray(unspecifiedTypes).slice(0, Math.min(2, unspecifiedTypes.length))
+  // 如果当前花费不足目标预算，继续添加菜品
+  if (totalCost < targetBudget) {
+    const specifiedTypes = new Set(Object.keys(constraints.typeDistribution))
+    const allTypes = Object.keys(dishesByType) as Dish['type'][]
+    const unspecifiedTypes = allTypes.filter(type => !specifiedTypes.has(type))
     
-    for (const type of typesToAdd) {
-      const availableForType = dishesByType[type] || []
-      if (availableForType.length === 0) continue
+    // 创建候选菜品池：包括未指定类型的菜品 + 已指定类型的额外菜品
+    const candidatePool: Array<{ dish: Dish; type: Dish['type']; isExtra: boolean }> = []
+    
+    // 添加未指定类型的菜品
+    unspecifiedTypes.forEach(type => {
+      const dishes = dishesByType[type] || []
+      dishes.forEach(dish => {
+        candidatePool.push({ dish, type, isExtra: false })
+      })
+    })
+    
+    // 添加已指定类型的额外菜品（可以超出用户指定的数量）
+    Object.keys(constraints.typeDistribution).forEach(type => {
+      const dishes = dishesByType[type as Dish['type']] || []
+      const alreadySelected = selectedDishes.filter(item => item.dish.type === type).map(item => item.dish.id)
+      dishes
+        .filter(dish => !alreadySelected.includes(dish.id))
+        .forEach(dish => {
+          candidatePool.push({ dish, type: type as Dish['type'], isExtra: true })
+        })
+    })
+    
+    // 按价格排序候选菜品
+    candidatePool.sort((a, b) => {
+      const priceA = a.dish.scaleWithPeople ? a.dish.price * constraints.headcount : a.dish.price
+      const priceB = b.dish.scaleWithPeople ? b.dish.price * constraints.headcount : b.dish.price
+      return priceA - priceB
+    })
+    
+    // 使用贪心算法填充预算：优先选择能让总价最接近目标的菜品
+    while (totalCost < targetBudget && candidatePool.length > 0) {
+      let bestCandidate: typeof candidatePool[0] | null = null
+      let bestScore = -1
       
-      // 使用工具函数进行智能随机选择
-      const { getRandomDish, remainingDishes } = selectDishesForType(availableForType)
+      // 寻找最佳候选菜品（让总价最接近目标预算的菜品）
+      for (let i = 0; i < candidatePool.length; i++) {
+        const candidate = candidatePool[i]!
+        const dishPrice = candidate.dish.scaleWithPeople 
+          ? candidate.dish.price * constraints.headcount 
+          : candidate.dish.price
+        const newTotalCost = totalCost + dishPrice
+        
+        // 不能超过最大预算
+        if (newTotalCost > maxBudget) continue
+        
+        // 计算得分：越接近目标预算得分越高
+        const distanceToTarget = Math.abs(targetBudget - newTotalCost)
+        const score = 1000 - distanceToTarget // 距离越小得分越高
+        
+        if (score > bestScore) {
+          bestScore = score
+          bestCandidate = candidate
+        }
+      }
       
-      // 尝试自动添加1个该类型的菜品
-      const dish = getRandomDish()
-      if (!dish) continue
-      
-      const quantity = dish.baseQuantity
-      const dishPrice = dish.scaleWithPeople ? dish.price * constraints.headcount : dish.price
-      const totalPrice = dishPrice * quantity
-      
-      // 检查是否在剩余预算内
-      if (totalCost + totalPrice <= constraints.budget) {
-        const filteredRemaining = remainingDishes.filter(altDish => altDish.id !== dish.id)
-        const alternatives = shuffleArray(filteredRemaining).slice(0, 3)
+      // 如果找到了合适的候选菜品，添加它
+      if (bestCandidate) {
+        const dish = bestCandidate.dish
+        const quantity = dish.baseQuantity
+        const dishPrice = dish.scaleWithPeople ? dish.price * constraints.headcount : dish.price
+        const totalPrice = dishPrice * quantity
+        
+        // 获取同类型菜品作为替换选项
+        const sameTypeDishes = dishesByType[dish.type] || []
+        const alternatives = shuffleArray(
+          sameTypeDishes.filter(altDish => altDish.id !== dish.id)
+        ).slice(0, 3)
         
         const dishItem: GenerationResult['dishes'][0] = {
           dish,
@@ -172,9 +219,31 @@ export function generateDishes(
         selectedDishes.push(dishItem)
         totalCost += totalPrice
         
-        warnings.push(`自动添加了${type}：${dish.name}`)
+        // 添加说明信息
+        if (bestCandidate.isExtra) {
+          warnings.push(`为更好利用预算，额外添加了${dish.type}：${dish.name}`)
+        } else {
+          warnings.push(`自动添加了${dish.type}：${dish.name}`)
+        }
+        
+        // 从候选池中移除这个菜品
+        const index = candidatePool.findIndex(c => c.dish.id === dish.id)
+        if (index !== -1) {
+          candidatePool.splice(index, 1)
+        }
+      } else {
+        // 如果没有合适的候选菜品，退出循环
+        break
       }
     }
+  }
+  
+  // 计算预算利用率并添加相关信息
+  const budgetUtilization = (totalCost / constraints.budget) * 100
+  if (budgetUtilization < 85) {
+    warnings.push(`预算利用率较低(${budgetUtilization.toFixed(1)}%)，建议增加菜品数量或预算`)
+  } else if (budgetUtilization >= 90) {
+    warnings.push(`预算利用率良好(${budgetUtilization.toFixed(1)}%)`)
   }
 
   const generationTime = Date.now() - startTime
@@ -184,7 +253,7 @@ export function generateDishes(
     totalCost,
     metadata: {
       generationTime,
-      algorithmVersion: 'v1.2.0-auto',
+      algorithmVersion: 'v1.3.0-budget',
       satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
         type => selectedDishes.some(item => item.dish.type === type)
       ),
