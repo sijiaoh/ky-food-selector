@@ -148,33 +148,24 @@ function App() {
             {parsedData.dishes.length > 0 && (
               <div className="dishes-preview">
                 <h3>菜品列表 ({parsedData.dishes.length}道菜)</h3>
-                <div className="dishes-grid">
+                <div className="dishes-compact-list">
                   {parsedData.dishes.map((dish) => (
-                    <div key={dish.id} className="dish-card">
-                      <div className="dish-card-header">
-                        <h4 className="dish-card-name">{dish.name}</h4>
-                        <span className="dish-card-price">¥{dish.price}</span>
+                    <div key={dish.id} className="dish-item">
+                      <div className="dish-main">
+                        <span className="dish-name">{dish.name}</span>
+                        <span className="dish-price">¥{dish.price}</span>
                       </div>
-                      <div className="dish-card-content">
-                        <div className="dish-card-row">
-                          <span className="dish-card-label">类型:</span>
-                          <span className="dish-card-value dish-type-badge">{dish.type}</span>
-                        </div>
-                        <div className="dish-card-row">
-                          <span className="dish-card-label">数量:</span>
-                          <span className="dish-card-value">{dish.baseQuantity}{dish.scaleWithPeople ? ' (按人数加量)' : ''}</span>
-                        </div>
-                        {(dish.temperature || dish.meatType) && (
-                          <div className="dish-card-row">
-                            {dish.temperature && <span className="dish-card-badge temp-badge">{dish.temperature}</span>}
-                            {dish.meatType && <span className="dish-card-badge meat-badge">{dish.meatType}</span>}
-                          </div>
-                        )}
+                      <div className="dish-details">
+                        <span className="dish-type-compact">{dish.type}</span>
+                        <span className="dish-quantity-compact">{dish.baseQuantity}{dish.scaleWithPeople ? '×人数' : ''}</span>
+                        {dish.temperature && <span className="dish-attr">{dish.temperature}</span>}
+                        {dish.meatType && <span className="dish-attr">{dish.meatType}</span>}
                         {dish.tags.length > 0 && (
-                          <div className="dish-card-tags">
-                            {dish.tags.map((tag, index) => (
-                              <span key={index} className="dish-card-tag">{tag}</span>
+                          <div className="dish-tags-compact">
+                            {dish.tags.slice(0, 3).map((tag, index) => (
+                              <span key={index} className="dish-tag-compact">{tag}</span>
                             ))}
+                            {dish.tags.length > 3 && <span className="dish-tag-more">+{dish.tags.length - 3}</span>}
                           </div>
                         )}
                       </div>

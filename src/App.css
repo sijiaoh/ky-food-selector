@@ -283,117 +283,98 @@
   color: #666;
 }
 
-/* 菜品卡片布局 */
-.dishes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.dish-card {
-  background: white;
+/* 菜品紧凑列表 */
+.dishes-compact-list {
+  margin-top: 0.5rem;
   border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: box-shadow 0.2s ease;
+  border-radius: 6px;
+  background: white;
+  overflow: hidden;
 }
 
-.dish-card:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+.dish-item {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.1s ease;
 }
 
-.dish-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 0.5rem;
+.dish-item:last-child {
+  border-bottom: none;
 }
 
-.dish-card-name {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  flex: 1;
+.dish-item:hover {
+  background-color: #f8f9fa;
 }
 
-.dish-card-price {
-  color: #dc3545;
-  font-weight: bold;
-  font-size: 1.1rem;
-  white-space: nowrap;
-}
-
-.dish-card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.dish-card-row {
+.dish-main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 1.5rem;
-  gap: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-.dish-card-label {
+.dish-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.dish-price {
+  color: #dc3545;
+  font-weight: bold;
   font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.dish-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.dish-type-compact {
+  background: #007bff;
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dish-quantity-compact {
   color: #666;
   font-weight: 500;
 }
 
-.dish-card-value {
-  font-size: 0.9rem;
-  color: #333;
-  text-align: right;
-}
-
-.dish-type-badge {
-  background: #007bff;
-  color: white;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.dish-card-badge {
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-left: 0.25rem;
-}
-
-.temp-badge {
-  background: #17a2b8;
-  color: white;
-}
-
-.meat-badge {
-  background: #28a745;
-  color: white;
-}
-
-.dish-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.25rem;
-}
-
-.dish-card-tag {
+.dish-attr {
   background: #e9ecef;
   color: #495057;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  white-space: nowrap;
+  padding: 0.1rem 0.3rem;
+  border-radius: 2px;
+  font-size: 0.7rem;
+}
+
+.dish-tags-compact {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+}
+
+.dish-tag-compact {
+  background: #f8f9fa;
+  color: #6c757d;
+  padding: 0.05rem 0.25rem;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  border: 1px solid #e9ecef;
+}
+
+.dish-tag-more {
+  color: #6c757d;
+  font-size: 0.7rem;
+  font-style: italic;
 }
 
 /* 错误列表 */
@@ -840,43 +821,36 @@
     flex: 1;
   }
 
-  /* 卡片响应式设计 */
-  .dishes-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+  /* 紧凑列表响应式设计 */
+  .dish-item {
+    padding: 0.4rem 0.6rem;
   }
 
-  .dish-card {
-    padding: 0.75rem;
+  .dish-main {
+    margin-bottom: 0.2rem;
   }
 
-  .dish-card-header {
-    margin-bottom: 0.5rem;
+  .dish-name {
+    font-size: 0.9rem;
   }
 
-  .dish-card-name {
-    font-size: 1rem;
-  }
-
-  .dish-card-price {
-    font-size: 1rem;
-  }
-
-  .dish-card-content {
-    gap: 0.4rem;
-  }
-
-  .dish-card-row {
-    min-height: 1.3rem;
-  }
-
-  .dish-card-label,
-  .dish-card-value {
+  .dish-price {
     font-size: 0.85rem;
   }
 
-  .dish-card-tag {
+  .dish-details {
+    gap: 0.3rem;
+    font-size: 0.75rem;
+  }
+
+  .dish-type-compact {
     font-size: 0.7rem;
-    padding: 0.1rem 0.3rem;
+    padding: 0.05rem 0.3rem;
+  }
+
+  .dish-attr,
+  .dish-tag-compact {
+    font-size: 0.65rem;
+    padding: 0.05rem 0.2rem;
   }
 }
