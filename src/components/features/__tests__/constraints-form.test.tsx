@@ -214,4 +214,35 @@ describe('ConstraintsForm', () => {
     
     expect(screen.getByText('保存配置')).toBeInTheDocument()
   })
+
+  it('应该显示温度搭配选项', () => {
+    render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
+    
+    expect(screen.getByText('温度搭配')).toBeInTheDocument()
+    expect(screen.getByText('热')).toBeInTheDocument()
+    expect(screen.getByText('冷')).toBeInTheDocument()
+  })
+
+  it('应该在温度分布改变时调用onChange', () => {
+    render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
+    
+    // 找到热菜的输入框
+    const hotInput = screen.getByLabelText(/热/)
+    
+    fireEvent.change(hotInput, { target: { value: '2' } })
+    
+    expect(mockOnChange).toHaveBeenCalledWith({
+      ...defaultConstraints,
+      temperatureDistribution: {
+        ...defaultConstraints.temperatureDistribution,
+        '热': 2
+      }
+    })
+  })
+
+  it('应该显示温度随机分配提示', () => {
+    render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
+    
+    expect(screen.getByText('双方都为空值时，系统会随机分配热菜冷菜')).toBeInTheDocument()
+  })
 })

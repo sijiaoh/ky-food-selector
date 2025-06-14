@@ -11,6 +11,7 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const dishTypes: Dish['type'][] = ['主食', '主菜', '副菜', '汤', '点心']
+  const temperatureTypes: NonNullable<Dish['temperature']>[] = ['热', '冷']
   
   // 计算菜品总数
   const totalDishes = Object.values(constraints.typeDistribution).reduce((sum, count) => sum + (count || 0), 0)
@@ -161,6 +162,27 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
     })
   }
 
+  const handleTemperatureDistributionChange = (temperature: NonNullable<Dish['temperature']>, value: number | undefined) => {
+    const newTemperatureDistribution = {
+      ...constraints.temperatureDistribution
+    }
+    
+    if (value === undefined) {
+      // 空值时，使用-1表示"自动安排"
+      newTemperatureDistribution[temperature] = -1
+    } else if (value === 0) {
+      // 明确填写0表示"不要这种温度"
+      delete newTemperatureDistribution[temperature]
+    } else {
+      newTemperatureDistribution[temperature] = value
+    }
+    
+    onChange({
+      ...constraints,
+      temperatureDistribution: newTemperatureDistribution
+    })
+  }
+
   const handlePresetSelect = (preset: typeof presets[0]) => {
     onChange(preset.config)
   }
@@ -272,6 +294,43 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
         <div className="summary-info">
           <p className="dish-count">当前选择总共 {totalDishes} 道菜</p>
           <p className="budget-suggestion">建议预算: ¥{suggestedBudget}</p>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <h3>温度搭配</h3>
+        {temperatureTypes.map((temperature) => (
+          <div key={temperature} className="form-field">
+            <label htmlFor={`temperature-${temperature}`}>
+              {temperature}
+              <span className="field-hint">（留空表示自动安排）</span>
+            </label>
+            <input
+              id={`temperature-${temperature}`}
+              type="number"
+              min="0"
+              placeholder="自动"
+              value={(() => {
+                const val = constraints.temperatureDistribution[temperature]
+                if (val === undefined || val === -1) return ''
+                return val
+              })()}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === '') {
+                  handleTemperatureDistributionChange(temperature, undefined)
+                } else {
+                  handleTemperatureDistributionChange(temperature, parseInt(value) || 0)
+                }
+              }}
+            />
+          </div>
+        ))}
+        
+        <div className="summary-info">
+          <p className="temperature-hint">
+            双方都为空值时，系统会随机分配热菜冷菜
+          </p>
         </div>
       </div>
 
