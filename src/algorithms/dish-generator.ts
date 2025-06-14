@@ -12,9 +12,18 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled
 }
 
-// 为指定类型选择菜品的工具函数
-const selectDishesForType = (availableForType: Dish[]) => {
-  const sortedDishes = availableForType.sort((a, b) => a.price - b.price)
+// 为指定类型选择菜品的工具函数，支持温度过滤
+const selectDishesForType = (availableForType: Dish[], temperatureFilter?: string) => {
+  // 如果指定了温度过滤，先按温度过滤
+  let filteredDishes = availableForType
+  if (temperatureFilter) {
+    filteredDishes = availableForType.filter(dish => {
+      const dishTemp = dish.temperature || '无'
+      return dishTemp === temperatureFilter
+    })
+  }
+  
+  const sortedDishes = filteredDishes.sort((a, b) => a.price - b.price)
   const cheapCount = Math.ceil(sortedDishes.length / 3)
   const midCount = Math.ceil(sortedDishes.length / 3)
   
@@ -67,6 +76,57 @@ export function generateDishes(
     return acc
   }, {} as Record<Dish['type'], Dish[]>)
 
+  // 按温度分组
+  const dishesByTemperature = filteredDishes.reduce((acc, dish) => {
+    const temp = dish.temperature || '无'
+    if (!acc[temp]) acc[temp] = []
+    acc[temp].push(dish)
+    return acc
+  }, {} as Record<string, Dish[]>)
+
+  // 处理温度约束，创建温度分配池
+  const temperaturePool: Record<string, number> = {}
+  let hasTemperatureConstraints = false
+  
+  // 检查是否有温度约束
+  for (const [temperature, count] of Object.entries(constraints.temperatureDistribution)) {
+    if (count !== undefined && count !== 0) {
+      hasTemperatureConstraints = true
+      if (count === -1) {
+        // 自动安排：基于可用菜品数量智能分配
+        const availableCount = (dishesByTemperature[temperature] || []).length
+        temperaturePool[temperature] = Math.min(3, Math.max(1, Math.floor(availableCount / 2)))
+        warnings.push(`自动为${temperature}菜安排了${temperaturePool[temperature]}个菜品`)
+      } else {
+        temperaturePool[temperature] = count
+      }
+    }
+  }
+  
+  // 如果没有温度约束且热菜冷菜都为空，实现随机分配
+  if (!hasTemperatureConstraints) {
+    const totalSelectedDishes = Object.values(constraints.typeDistribution).reduce((sum, count) => {
+      if (count === -1) return sum + 2 // 自动安排时估算2个
+      return sum + (count || 0)
+    }, 0)
+    
+    if (totalSelectedDishes > 0) {
+      // 随机分配热菜冷菜比例
+      const hotRatio = 0.6 + Math.random() * 0.3 // 60%-90%的菜品为热菜
+      const estimatedHot = Math.ceil(totalSelectedDishes * hotRatio)
+      const estimatedCold = totalSelectedDishes - estimatedHot
+      
+      if (dishesByTemperature['热'] && dishesByTemperature['热'].length > 0) {
+        temperaturePool['热'] = estimatedHot
+      }
+      if (dishesByTemperature['冷'] && dishesByTemperature['冷'].length > 0) {
+        temperaturePool['冷'] = estimatedCold
+      }
+      
+      warnings.push(`随机分配温度：热菜${estimatedHot}个，冷菜${estimatedCold}个`)
+    }
+  }
+
   // 先处理用户明确指定数量的菜品类型
   for (const [type, requestedCount] of Object.entries(constraints.typeDistribution)) {
     if (requestedCount <= 0 && requestedCount !== -1) continue
@@ -97,11 +157,65 @@ export function generateDishes(
       }
     }
 
-    // 使用工具函数进行智能随机选择
-    const { getRandomDish, remainingDishes } = selectDishesForType(availableForType)
+    // 根据温度约束选择菜品
+    const selectedInThisType: Dish[] = []
     
-    for (let i = 0; i < actualCount; i++) {
-      const dish = getRandomDish()
+    // 如果有温度约束，按温度分配选择菜品
+    if (hasTemperatureConstraints || Object.keys(temperaturePool).length > 0) {
+      const remainingForType = [...availableForType]
+      
+      // 按温度优先级选择
+      for (const [temperature, neededCount] of Object.entries(temperaturePool)) {
+        if (neededCount <= 0) continue
+        if (selectedInThisType.length >= actualCount) break
+        
+        const { getRandomDish } = selectDishesForType(remainingForType, temperature)
+        
+        const maxFromThisTemp = Math.min(
+          neededCount, 
+          actualCount - selectedInThisType.length,
+          remainingForType.filter(d => (d.temperature || '无') === temperature).length
+        )
+        
+        for (let j = 0; j < maxFromThisTemp; j++) {
+          const dish = getRandomDish()
+          if (dish) {
+            selectedInThisType.push(dish)
+            // 从池中扣除
+            temperaturePool[temperature] = (temperaturePool[temperature] || 0) - 1
+            // 从剩余菜品中移除
+            const index = remainingForType.findIndex(d => d.id === dish.id)
+            if (index !== -1) remainingForType.splice(index, 1)
+          }
+        }
+      }
+      
+      // 如果还需要更多菜品，从剩余的菜品中选择（不考虑温度）
+      if (selectedInThisType.length < actualCount) {
+        const { getRandomDish } = selectDishesForType(remainingForType)
+        const stillNeeded = actualCount - selectedInThisType.length
+        
+        for (let j = 0; j < stillNeeded; j++) {
+          const dish = getRandomDish()
+          if (dish) {
+            selectedInThisType.push(dish)
+          }
+        }
+      }
+    } else {
+      // 没有温度约束时，正常选择
+      const { getRandomDish } = selectDishesForType(availableForType)
+      
+      for (let i = 0; i < actualCount; i++) {
+        const dish = getRandomDish()
+        if (dish) {
+          selectedInThisType.push(dish)
+        }
+      }
+    }
+    
+    // 处理选中的菜品
+    for (const dish of selectedInThisType) {
       if (!dish) continue // 跳过undefined
       
       // 计算实际数量：如果需要根据人数加量，数量为基础个数×人数；否则为基础个数
@@ -116,10 +230,10 @@ export function generateDishes(
       }
 
       // 找到同类型的其他可选菜品作为替换选项
-      const filteredRemaining = remainingDishes.filter(altDish => altDish.id !== dish.id)
-      
-      // 随机选择3个替换选项，确保多样性
-      const alternatives = shuffleArray(filteredRemaining).slice(0, 3)
+      const sameTypeDishes = dishesByType[dish.type] || []
+      const alternatives = shuffleArray(
+        sameTypeDishes.filter(altDish => altDish.id !== dish.id)
+      ).slice(0, 3)
 
       const dishItem: GenerationResult['dishes'][0] = {
         dish,

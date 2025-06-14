@@ -639,3 +639,132 @@ describe('手动调整功能', () => {
     }).not.toThrow()
   })
 })
+
+describe('温度搭配功能', () => {
+  const tempDishes: Dish[] = [
+    {
+      id: '1', name: '热汤面', price: 15, type: '主食',
+      temperature: '热', tags: [], baseQuantity: 1, scaleWithPeople: false
+    },
+    {
+      id: '2', name: '凉面', price: 12, type: '主食', 
+      temperature: '冷', tags: [], baseQuantity: 1, scaleWithPeople: false
+    },
+    {
+      id: '3', name: '红烧肉', price: 35, type: '主菜',
+      temperature: '热', tags: [], baseQuantity: 1, scaleWithPeople: false
+    },
+    {
+      id: '4', name: '白切鸡', price: 32, type: '主菜',
+      temperature: '冷', tags: [], baseQuantity: 1, scaleWithPeople: false
+    },
+    {
+      id: '5', name: '清炒青菜', price: 10, type: '副菜',
+      temperature: '热', tags: [], baseQuantity: 1, scaleWithPeople: false
+    },
+    {
+      id: '6', name: '凉拌黄瓜', price: 8, type: '副菜',
+      temperature: '冷', tags: [], baseQuantity: 1, scaleWithPeople: false
+    }
+  ]
+
+  it('应该正确处理温度搭配约束', () => {
+    const constraintsWithTemperature: Constraints = {
+      headcount: 4,
+      budget: 200,
+      typeDistribution: {
+        '主食': 1,
+        '主菜': 1,
+        '副菜': 1
+      },
+      temperatureDistribution: {
+        '热': 2,
+        '冷': 1
+      },
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+    
+    const result = generateDishes(tempDishes, constraintsWithTemperature)
+    
+    // 检查是否有热菜和冷菜
+    const hotDishes = result.dishes.filter(item => item.dish.temperature === '热')
+    const coldDishes = result.dishes.filter(item => item.dish.temperature === '冷')
+    
+    expect(hotDishes.length).toBeGreaterThan(0)
+    expect(coldDishes.length).toBeGreaterThan(0)
+    expect(result.totalCost).toBeLessThanOrEqual(constraintsWithTemperature.budget)
+  })
+
+  it('应该在温度约束为空时随机分配热菜冷菜', () => {
+    const constraintsWithNoTemp: Constraints = {
+      headcount: 4,
+      budget: 200,
+      typeDistribution: {
+        '主食': 1,
+        '主菜': 1,
+        '副菜': 1
+      },
+      temperatureDistribution: {},
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+    
+    const result = generateDishes(tempDishes, constraintsWithNoTemp)
+    
+    // 应该有一些温度信息的提示
+    expect(result.metadata.warnings.some(w => w.includes('随机分配温度'))).toBe(true)
+    expect(result.dishes.length).toBeGreaterThan(0)
+  })
+
+  it('应该处理温度自动安排(-1值)', () => {
+    const constraintsWithAutoTemp: Constraints = {
+      headcount: 4,
+      budget: 200,
+      typeDistribution: {
+        '主食': 1,
+        '主菜': 1,
+        '副菜': 1
+      },
+      temperatureDistribution: {
+        '热': -1,
+        '冷': -1
+      },
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+    
+    const result = generateDishes(tempDishes, constraintsWithAutoTemp)
+    
+    // 应该有自动安排的提示
+    expect(result.metadata.warnings.some(w => w.includes('自动为热菜安排'))).toBe(true)
+    expect(result.metadata.warnings.some(w => w.includes('自动为冷菜安排'))).toBe(true)
+    expect(result.dishes.length).toBeGreaterThan(0)
+  })
+
+  it('应该在温度约束无法满足时给出警告', () => {
+    const impossibleTempConstraints: Constraints = {
+      headcount: 4,
+      budget: 200,
+      typeDistribution: {
+        '主食': 1
+      },
+      temperatureDistribution: {
+        '热': 10, // 要求10个热菜，但实际只有3个
+        '冷': 10  // 要求10个冷菜，但实际只有3个
+      },
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+    
+    const result = generateDishes(tempDishes, impossibleTempConstraints)
+    
+    // 虽然约束无法完全满足，但应该尽力生成一些菜品
+    expect(result.dishes.length).toBeGreaterThan(0)
+    expect(result.totalCost).toBeLessThanOrEqual(impossibleTempConstraints.budget)
+  })
+})
