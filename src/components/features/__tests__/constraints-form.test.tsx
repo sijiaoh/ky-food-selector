@@ -8,6 +8,7 @@ describe('ConstraintsForm', () => {
   const defaultConstraints: Constraints = {
     headcount: 4,
     budget: 200,
+    personalBudget: 50,
     typeDistribution: {
       '主食': 1,
       '主菜': 2,
@@ -30,7 +31,8 @@ describe('ConstraintsForm', () => {
     
     // 验证基础字段存在
     expect(screen.getByLabelText('人数')).toBeInTheDocument()
-    expect(screen.getByLabelText('预算 (元)')).toBeInTheDocument()
+    expect(screen.getByLabelText('总预算 (元)')).toBeInTheDocument()
+    expect(screen.getByLabelText('个人预算 (元)')).toBeInTheDocument()
     expect(screen.getByText('菜品类型搭配')).toBeInTheDocument()
   })
 
@@ -38,10 +40,12 @@ describe('ConstraintsForm', () => {
     render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
     
     const headcountInput = screen.getByLabelText('人数') as HTMLInputElement
-    const budgetInput = screen.getByLabelText('预算 (元)') as HTMLInputElement
+    const budgetInput = screen.getByLabelText('总预算 (元)') as HTMLInputElement
+    const personalBudgetInput = screen.getByLabelText('个人预算 (元)') as HTMLInputElement
     
     expect(headcountInput.value).toBe('4')
     expect(budgetInput.value).toBe('200')
+    expect(personalBudgetInput.value).toBe('50')
   })
 
   it('应该在人数改变时调用onChange', () => {
@@ -52,19 +56,22 @@ describe('ConstraintsForm', () => {
     
     expect(mockOnChange).toHaveBeenCalledWith({
       ...defaultConstraints,
-      headcount: 6
+      headcount: 6,
+      budget: 300, // 50 * 6
+      personalBudget: 50
     })
   })
 
   it('应该在预算改变时调用onChange', () => {
     render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
     
-    const budgetInput = screen.getByLabelText('预算 (元)')
+    const budgetInput = screen.getByLabelText('总预算 (元)')
     fireEvent.change(budgetInput, { target: { value: '300' } })
     
     expect(mockOnChange).toHaveBeenCalledWith({
       ...defaultConstraints,
-      budget: 300
+      budget: 300,
+      personalBudget: 75 // 300 / 4
     })
   })
 
@@ -101,10 +108,32 @@ describe('ConstraintsForm', () => {
   it('应该验证预算不能小于等于0', () => {
     render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
     
-    const budgetInput = screen.getByLabelText('预算 (元)')
+    const budgetInput = screen.getByLabelText('总预算 (元)')
     fireEvent.change(budgetInput, { target: { value: '0' } })
     
-    expect(screen.getByText('预算必须大于0')).toBeInTheDocument()
+    expect(screen.getByText('总预算必须大于0')).toBeInTheDocument()
+  })
+
+  it('应该在个人预算改变时调用onChange并更新总预算', () => {
+    render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
+    
+    const personalBudgetInput = screen.getByLabelText('个人预算 (元)')
+    fireEvent.change(personalBudgetInput, { target: { value: '60' } })
+    
+    expect(mockOnChange).toHaveBeenCalledWith({
+      ...defaultConstraints,
+      personalBudget: 60,
+      budget: 240 // 60 * 4
+    })
+  })
+
+  it('应该验证个人预算不能小于等于0', () => {
+    render(<ConstraintsForm constraints={defaultConstraints} onChange={mockOnChange} />)
+    
+    const personalBudgetInput = screen.getByLabelText('个人预算 (元)')
+    fireEvent.change(personalBudgetInput, { target: { value: '0' } })
+    
+    expect(screen.getByText('个人预算必须大于0')).toBeInTheDocument()
   })
 
   it('应该计算菜品类型总数并显示提示', () => {
@@ -168,6 +197,7 @@ describe('ConstraintsForm', () => {
       expect.objectContaining({
         headcount: 6,
         budget: 300,
+        personalBudget: 50,
         typeDistribution: expect.objectContaining({
           '主食': 2,
           '主菜': 3,

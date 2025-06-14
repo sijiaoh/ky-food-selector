@@ -34,6 +34,7 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
       config: {
         headcount: 6,
         budget: 300,
+        personalBudget: 50,
         typeDistribution: {
           '主食': 2,
           '主菜': 3,
@@ -52,6 +53,7 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
       config: {
         headcount: 8,
         budget: 500,
+        personalBudget: 62,
         typeDistribution: {
           '主食': 2,
           '主菜': 4,
@@ -70,6 +72,7 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
       config: {
         headcount: 3,
         budget: 150,
+        personalBudget: 50,
         typeDistribution: {
           '主食': 1,
           '主菜': 2,
@@ -96,19 +99,44 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
     }
 
     if (field === 'budget' && value <= 0) {
-      newErrors.budget = '预算必须大于0'
+      newErrors.budget = '总预算必须大于0'
     } else if (field === 'budget') {
       delete newErrors.budget
+    }
+
+    if (field === 'personalBudget' && value <= 0) {
+      newErrors.personalBudget = '个人预算必须大于0'
+    } else if (field === 'personalBudget') {
+      delete newErrors.personalBudget
     }
 
     setErrors(newErrors)
 
     // 如果没有错误，更新约束条件
     if (!newErrors[field]) {
-      onChange({
+      let newConstraints = {
         ...constraints,
         [field]: value
-      })
+      }
+
+      // 处理个人金额和总预算的联动
+      if (field === 'personalBudget') {
+        // 个人金额变化时，自动计算总预算
+        newConstraints.budget = value * constraints.headcount
+      } else if (field === 'budget') {
+        // 总预算变化时，自动计算个人金额
+        newConstraints.personalBudget = Math.round(value / constraints.headcount)
+      } else if (field === 'headcount') {
+        // 人数变化时，如果有个人金额，重新计算总预算
+        if (constraints.personalBudget) {
+          newConstraints.budget = (constraints.personalBudget || 0) * value
+        } else {
+          // 如果没有个人金额，计算建议的个人金额
+          newConstraints.personalBudget = Math.round(constraints.budget / value)
+        }
+      }
+
+      onChange(newConstraints)
     }
   }
 
@@ -187,7 +215,19 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
         </div>
 
         <div className="form-field">
-          <label htmlFor="budget">预算 (元)</label>
+          <label htmlFor="personalBudget">个人预算 (元)</label>
+          <input
+            id="personalBudget"
+            type="number"
+            min="1"
+            value={constraints.personalBudget || Math.round(constraints.budget / constraints.headcount)}
+            onChange={(e) => validateAndUpdate('personalBudget', parseInt(e.target.value) || 0)}
+          />
+          {errors.personalBudget && <span className="error">{errors.personalBudget}</span>}
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="budget">总预算 (元)</label>
           <input
             id="budget"
             type="number"

@@ -18,6 +18,7 @@ export interface Dish {
 export interface Constraints {
   headcount: number;
   budget: number;
+  personalBudget?: number; // 个人金额，可选字段
   typeDistribution: Partial<Record<Dish['type'], number>>;
   temperatureDistribution: Partial<Record<NonNullable<Dish['temperature']>, number>>;
   meatDistribution: Partial<Record<NonNullable<Dish['meatType']>, number>>;

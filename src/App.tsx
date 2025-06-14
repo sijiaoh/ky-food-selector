@@ -17,6 +17,7 @@ function App() {
   const [constraints, setConstraints] = useState<Constraints>({
     headcount: 4,
     budget: 200,
+    personalBudget: 50,
     typeDistribution: {
       '主食': 1,
       '主菜': 2,
