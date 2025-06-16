@@ -90,14 +90,21 @@ export function generateDishes(
   
   // 检查是否有温度约束
   for (const [temperature, count] of Object.entries(constraints.temperatureDistribution)) {
-    if (count !== undefined && count !== 0) {
-      hasTemperatureConstraints = true
-      if (count === -1) {
+    if (count !== undefined) {
+      if (count === 0) {
+        // 明确设为0表示不要这种温度
+        hasTemperatureConstraints = true
+        // 不添加到temperaturePool，相当于排除这种温度
+        continue
+      } else if (count === -1) {
         // 自动安排：不设置上限，随机填充到预算上限
+        hasTemperatureConstraints = true
         const availableCount = (dishesByTemperature[temperature] || []).length
         temperaturePool[temperature] = availableCount // 使用所有可用菜品，让预算来控制
         warnings.push(`自动为${temperature}菜安排，将随机填充到预算上限`)
-      } else {
+      } else if (count > 0) {
+        // 明确指定数量
+        hasTemperatureConstraints = true
         temperaturePool[temperature] = count
       }
     }
@@ -110,7 +117,8 @@ export function generateDishes(
 
   // 先处理用户明确指定数量的菜品类型
   for (const [type, requestedCount] of Object.entries(constraints.typeDistribution)) {
-    if (requestedCount <= 0 && requestedCount !== -1) continue
+    if (requestedCount < 0 && requestedCount !== -1) continue // 负数但不是-1的跳过
+    if (requestedCount === 0) continue // 明确设为0的跳过
 
     const availableForType = dishesByType[type as Dish['type']] || []
     
@@ -139,7 +147,18 @@ export function generateDishes(
     
     // 如果是自动安排(-1)，则逐个添加菜品直到预算不足
     if (requestedCount === -1) {
-      const { getRandomDish } = selectDishesForType(availableForType)
+      // 过滤掉被排除的温度菜品
+      let filteredForType = availableForType
+      if (hasTemperatureConstraints) {
+        filteredForType = availableForType.filter(dish => {
+          const dishTemp = dish.temperature || '无'
+          // 检查是否在约束中被明确设为0
+          const tempConstraint = constraints.temperatureDistribution[dishTemp as NonNullable<Dish['temperature']>]
+          return tempConstraint !== 0 // 不等于0的都可以选择
+        })
+      }
+      
+      const { getRandomDish } = selectDishesForType(filteredForType)
       
       // 持续添加菜品直到预算不足
       while (true) {
@@ -201,8 +220,18 @@ export function generateDishes(
           }
         }
       } else {
-        // 没有温度约束时，正常选择
-        const { getRandomDish } = selectDishesForType(availableForType)
+        // 没有温度约束时，正常选择，但要过滤掉被排除的温度
+        let filteredForType = availableForType
+        if (hasTemperatureConstraints) {
+          filteredForType = availableForType.filter(dish => {
+            const dishTemp = dish.temperature || '无'
+            // 检查是否在约束中被明确设为0
+            const tempConstraint = constraints.temperatureDistribution[dishTemp as NonNullable<Dish['temperature']>]
+            return tempConstraint !== 0 // 不等于0的都可以选择
+          })
+        }
+        
+        const { getRandomDish } = selectDishesForType(filteredForType)
         
         for (let i = 0; i < actualCount; i++) {
           const dish = getRandomDish()
@@ -279,6 +308,12 @@ export function generateDishes(
     unspecifiedTypes.forEach(type => {
       const dishes = dishesByType[type] || []
       dishes.forEach(dish => {
+        // 检查温度约束，排除被设为0的温度
+        if (hasTemperatureConstraints) {
+          const dishTemp = dish.temperature || '无'
+          const tempConstraint = constraints.temperatureDistribution[dishTemp as NonNullable<Dish['temperature']>]
+          if (tempConstraint === 0) return // 跳过被排除的温度
+        }
         candidatePool.push({ dish, type, isExtra: false })
       })
     })
@@ -290,6 +325,12 @@ export function generateDishes(
       dishes
         .filter(dish => !alreadySelected.includes(dish.id))
         .forEach(dish => {
+          // 检查温度约束，排除被设为0的温度
+          if (hasTemperatureConstraints) {
+            const dishTemp = dish.temperature || '无'
+            const tempConstraint = constraints.temperatureDistribution[dishTemp as NonNullable<Dish['temperature']>]
+            if (tempConstraint === 0) return // 跳过被排除的温度
+          }
           candidatePool.push({ dish, type, isExtra: true })
         })
     })
@@ -303,6 +344,12 @@ export function generateDishes(
         dishes
           .filter(dish => !alreadySelected.includes(dish.id))
           .forEach(dish => {
+            // 检查温度约束，排除被设为0的温度
+            if (hasTemperatureConstraints) {
+              const dishTemp = dish.temperature || '无'
+              const tempConstraint = constraints.temperatureDistribution[dishTemp as NonNullable<Dish['temperature']>]
+              if (tempConstraint === 0) return // 跳过被排除的温度
+            }
             candidatePool.push({ dish, type: type as Dish['type'], isExtra: true })
           })
       })

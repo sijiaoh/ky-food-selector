@@ -149,10 +149,8 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
     if (value === undefined) {
       // 空值时，使用-1表示"自动安排"
       newTypeDistribution[type] = -1
-    } else if (value === 0) {
-      // 明确填写0表示"不要这种类型"
-      delete newTypeDistribution[type]
     } else {
+      // 包括0在内的所有数字都保存
       newTypeDistribution[type] = value
     }
     
@@ -170,10 +168,8 @@ export function ConstraintsForm({ constraints, onChange }: ConstraintsFormProps)
     if (value === undefined) {
       // 空值时，使用-1表示"自动安排"
       newTemperatureDistribution[temperature] = -1
-    } else if (value === 0) {
-      // 明确填写0表示"不要这种温度"
-      delete newTemperatureDistribution[temperature]
     } else {
+      // 包括0在内的所有数字都保存
       newTemperatureDistribution[temperature] = value
     }
     

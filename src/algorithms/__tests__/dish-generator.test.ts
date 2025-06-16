@@ -769,4 +769,32 @@ describe('温度搭配功能', () => {
     expect(result.dishes.length).toBeGreaterThan(0)
     expect(result.totalCost).toBeLessThanOrEqual(impossibleTempConstraints.budget)
   })
+
+  it('应该正确处理0值约束（排除特定温度）', () => {
+    const constraintsExcludeCold: Constraints = {
+      headcount: 4,
+      budget: 200,
+      typeDistribution: {
+        '主菜': -1,  // 自动安排主菜，这样算法会优先选择热菜
+        '副菜': -1   // 自动安排副菜，这样算法会优先选择热菜
+      },
+      temperatureDistribution: {
+        '热': -1,  // 自动安排热菜
+        '冷': 0    // 明确设为0，表示不要冷菜
+      },
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+    
+    const result = generateDishes(tempDishes, constraintsExcludeCold)
+    
+    // 检查结果中不应该有冷菜
+    const coldDishes = result.dishes.filter(item => item.dish.temperature === '冷')
+    const hotDishes = result.dishes.filter(item => item.dish.temperature === '热')
+    
+    expect(coldDishes.length).toBe(0) // 应该没有冷菜
+    expect(hotDishes.length).toBeGreaterThan(0) // 应该有热菜
+    expect(result.dishes.length).toBeGreaterThan(0)
+  })
 })
