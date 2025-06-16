@@ -93,38 +93,19 @@ export function generateDishes(
     if (count !== undefined && count !== 0) {
       hasTemperatureConstraints = true
       if (count === -1) {
-        // 自动安排：基于可用菜品数量智能分配
+        // 自动安排：不设置上限，随机填充到预算上限
         const availableCount = (dishesByTemperature[temperature] || []).length
-        temperaturePool[temperature] = Math.min(3, Math.max(1, Math.floor(availableCount / 2)))
-        warnings.push(`自动为${temperature}菜安排了${temperaturePool[temperature]}个菜品`)
+        temperaturePool[temperature] = availableCount // 使用所有可用菜品，让预算来控制
+        warnings.push(`自动为${temperature}菜安排，将随机填充到预算上限`)
       } else {
         temperaturePool[temperature] = count
       }
     }
   }
   
-  // 如果没有温度约束且热菜冷菜都为空，实现随机分配
+  // 如果没有温度约束且热菜冷菜都为空，不设置温度限制，让预算控制
   if (!hasTemperatureConstraints) {
-    const totalSelectedDishes = Object.values(constraints.typeDistribution).reduce((sum, count) => {
-      if (count === -1) return sum + 2 // 自动安排时估算2个
-      return sum + (count || 0)
-    }, 0)
-    
-    if (totalSelectedDishes > 0) {
-      // 随机分配热菜冷菜比例
-      const hotRatio = 0.6 + Math.random() * 0.3 // 60%-90%的菜品为热菜
-      const estimatedHot = Math.ceil(totalSelectedDishes * hotRatio)
-      const estimatedCold = totalSelectedDishes - estimatedHot
-      
-      if (dishesByTemperature['热'] && dishesByTemperature['热'].length > 0) {
-        temperaturePool['热'] = estimatedHot
-      }
-      if (dishesByTemperature['冷'] && dishesByTemperature['冷'].length > 0) {
-        temperaturePool['冷'] = estimatedCold
-      }
-      
-      warnings.push(`随机分配温度：热菜${estimatedHot}个，冷菜${estimatedCold}个`)
-    }
+    warnings.push(`温度搭配未指定，将随机选择热菜冷菜直到预算上限`)
   }
 
   // 先处理用户明确指定数量的菜品类型
@@ -141,13 +122,9 @@ export function generateDishes(
     // 处理自动安排(-1)的情况
     let actualCount: number
     if (requestedCount === -1) {
-      // 自动安排：根据预算和可用菜品智能选择数量（1-3个）
-      const maxAffordable = Math.floor((constraints.budget * 0.3) / 20) // 假设平均每道菜20元，最多用30%预算
-      actualCount = Math.min(
-        Math.max(1, Math.min(3, maxAffordable)), // 最少1个，最多3个
-        availableForType.length
-      )
-      warnings.push(`自动为${type}安排了${actualCount}个菜品`)
+      // 自动安排：不设置上限，使用所有可用菜品，让预算来控制
+      actualCount = availableForType.length
+      warnings.push(`自动为${type}安排，将随机填充到预算上限`)
     } else {
       // 用户明确指定数量
       actualCount = Math.min(requestedCount, availableForType.length)
@@ -160,56 +137,78 @@ export function generateDishes(
     // 根据温度约束选择菜品
     const selectedInThisType: Dish[] = []
     
-    // 如果有温度约束，按温度分配选择菜品
-    if (hasTemperatureConstraints || Object.keys(temperaturePool).length > 0) {
-      const remainingForType = [...availableForType]
-      
-      // 按温度优先级选择
-      for (const [temperature, neededCount] of Object.entries(temperaturePool)) {
-        if (neededCount <= 0) continue
-        if (selectedInThisType.length >= actualCount) break
-        
-        const { getRandomDish } = selectDishesForType(remainingForType, temperature)
-        
-        const maxFromThisTemp = Math.min(
-          neededCount, 
-          actualCount - selectedInThisType.length,
-          remainingForType.filter(d => (d.temperature || '无') === temperature).length
-        )
-        
-        for (let j = 0; j < maxFromThisTemp; j++) {
-          const dish = getRandomDish()
-          if (dish) {
-            selectedInThisType.push(dish)
-            // 从池中扣除
-            temperaturePool[temperature] = (temperaturePool[temperature] || 0) - 1
-            // 从剩余菜品中移除
-            const index = remainingForType.findIndex(d => d.id === dish.id)
-            if (index !== -1) remainingForType.splice(index, 1)
-          }
-        }
-      }
-      
-      // 如果还需要更多菜品，从剩余的菜品中选择（不考虑温度）
-      if (selectedInThisType.length < actualCount) {
-        const { getRandomDish } = selectDishesForType(remainingForType)
-        const stillNeeded = actualCount - selectedInThisType.length
-        
-        for (let j = 0; j < stillNeeded; j++) {
-          const dish = getRandomDish()
-          if (dish) {
-            selectedInThisType.push(dish)
-          }
-        }
-      }
-    } else {
-      // 没有温度约束时，正常选择
+    // 如果是自动安排(-1)，则逐个添加菜品直到预算不足
+    if (requestedCount === -1) {
       const { getRandomDish } = selectDishesForType(availableForType)
       
-      for (let i = 0; i < actualCount; i++) {
+      // 持续添加菜品直到预算不足
+      while (true) {
         const dish = getRandomDish()
-        if (dish) {
-          selectedInThisType.push(dish)
+        if (!dish) break // 没有更多菜品了
+        
+        const quantity = dish.scaleWithPeople ? dish.baseQuantity * constraints.headcount : dish.baseQuantity
+        const dishTotalPrice = dish.price * quantity
+        
+        // 检查预算是否足够
+        if (totalCost + dishTotalPrice > constraints.budget) {
+          break // 预算不足，停止添加
+        }
+        
+        selectedInThisType.push(dish)
+        totalCost += dishTotalPrice
+      }
+    } else {
+      // 用户指定数量时，按温度约束选择
+      if (hasTemperatureConstraints || Object.keys(temperaturePool).length > 0) {
+        const remainingForType = [...availableForType]
+        
+        // 按温度优先级选择
+        for (const [temperature, neededCount] of Object.entries(temperaturePool)) {
+          if (neededCount <= 0) continue
+          if (selectedInThisType.length >= actualCount) break
+          
+          const { getRandomDish } = selectDishesForType(remainingForType, temperature)
+          
+          const maxFromThisTemp = Math.min(
+            neededCount, 
+            actualCount - selectedInThisType.length,
+            remainingForType.filter(d => (d.temperature || '无') === temperature).length
+          )
+          
+          for (let j = 0; j < maxFromThisTemp; j++) {
+            const dish = getRandomDish()
+            if (dish) {
+              selectedInThisType.push(dish)
+              // 从池中扣除
+              temperaturePool[temperature] = (temperaturePool[temperature] || 0) - 1
+              // 从剩余菜品中移除
+              const index = remainingForType.findIndex(d => d.id === dish.id)
+              if (index !== -1) remainingForType.splice(index, 1)
+            }
+          }
+        }
+        
+        // 如果还需要更多菜品，从剩余的菜品中选择（不考虑温度）
+        if (selectedInThisType.length < actualCount) {
+          const { getRandomDish } = selectDishesForType(remainingForType)
+          const stillNeeded = actualCount - selectedInThisType.length
+          
+          for (let j = 0; j < stillNeeded; j++) {
+            const dish = getRandomDish()
+            if (dish) {
+              selectedInThisType.push(dish)
+            }
+          }
+        }
+      } else {
+        // 没有温度约束时，正常选择
+        const { getRandomDish } = selectDishesForType(availableForType)
+        
+        for (let i = 0; i < actualCount; i++) {
+          const dish = getRandomDish()
+          if (dish) {
+            selectedInThisType.push(dish)
+          }
         }
       }
     }
@@ -223,10 +222,12 @@ export function generateDishes(
       const dishPrice = dish.price // 保持单价不变
       const totalPrice = dishPrice * quantity
 
-      // 检查预算
-      if (totalCost + totalPrice > constraints.budget) {
-        warnings.push('预算可能不足，无法满足所有约束')
-        break
+      // 如果不是自动安排模式，需要检查预算
+      if (requestedCount !== -1) {
+        if (totalCost + totalPrice > constraints.budget) {
+          warnings.push('预算可能不足，无法满足所有约束')
+          break
+        }
       }
 
       // 找到同类型的其他可选菜品作为替换选项
@@ -249,7 +250,10 @@ export function generateDishes(
       
       selectedDishes.push(dishItem)
 
-      totalCost += totalPrice
+      // 如果不是自动安排模式，需要累加totalCost
+      if (requestedCount !== -1) {
+        totalCost += totalPrice
+      }
     }
   }
 

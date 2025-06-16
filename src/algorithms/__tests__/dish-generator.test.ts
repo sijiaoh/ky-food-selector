@@ -431,7 +431,7 @@ describe('菜品生成算法', () => {
 
     // 验证有相关的自动安排警告
     const autoWarnings = result.metadata.warnings.filter(warning => 
-      warning.includes('自动为') && warning.includes('安排了')
+      warning.includes('自动为') && warning.includes('安排')
     )
     expect(autoWarnings.length).toBeGreaterThan(0)
 
@@ -697,7 +697,7 @@ describe('温度搭配功能', () => {
     expect(result.totalCost).toBeLessThanOrEqual(constraintsWithTemperature.budget)
   })
 
-  it('应该在温度约束为空时随机分配热菜冷菜', () => {
+  it('应该在温度约束为空时随机选择直到预算上限', () => {
     const constraintsWithNoTemp: Constraints = {
       headcount: 4,
       budget: 200,
@@ -714,12 +714,12 @@ describe('温度搭配功能', () => {
     
     const result = generateDishes(tempDishes, constraintsWithNoTemp)
     
-    // 应该有一些温度信息的提示
-    expect(result.metadata.warnings.some(w => w.includes('随机分配温度'))).toBe(true)
+    // 应该有温度搭配未指定的提示
+    expect(result.metadata.warnings.some(w => w.includes('温度搭配未指定，将随机选择热菜冷菜直到预算上限'))).toBe(true)
     expect(result.dishes.length).toBeGreaterThan(0)
   })
 
-  it('应该处理温度自动安排(-1值)', () => {
+  it('应该处理温度自动安排(-1值)填充到预算上限', () => {
     const constraintsWithAutoTemp: Constraints = {
       headcount: 4,
       budget: 200,
@@ -739,10 +739,12 @@ describe('温度搭配功能', () => {
     
     const result = generateDishes(tempDishes, constraintsWithAutoTemp)
     
-    // 应该有自动安排的提示
-    expect(result.metadata.warnings.some(w => w.includes('自动为热菜安排'))).toBe(true)
-    expect(result.metadata.warnings.some(w => w.includes('自动为冷菜安排'))).toBe(true)
+    // 应该有随机填充到预算上限的提示
+    expect(result.metadata.warnings.some(w => w.includes('将随机填充到预算上限'))).toBe(true)
     expect(result.dishes.length).toBeGreaterThan(0)
+    // 预算利用率应该比较高
+    const budgetUtilization = (result.totalCost / constraintsWithAutoTemp.budget) * 100
+    expect(budgetUtilization).toBeGreaterThan(50) // 至少使用50%的预算
   })
 
   it('应该在温度约束无法满足时给出警告', () => {
