@@ -290,7 +290,38 @@ export function generateDishes(
   const targetBudget = constraints.budget * 0.9 // 目标预算：90%
   const maxBudget = constraints.budget // 最大预算：100%
   
-  // 如果当前花费不足目标预算，继续添加菜品
+  // 检查是否有用户明确指定数量的约束（>0的数值）
+  const hasExplicitCounts = Object.values(constraints.typeDistribution).some(count => count > 0)
+  
+  // 如果用户明确指定了所有数量，就不进行预算优化添加额外菜品
+  if (hasExplicitCounts) {
+    const hasAutoArrange = Object.values(constraints.typeDistribution).some(count => count === -1)
+    
+    // 只有当存在自动安排(-1)时才继续优化预算
+    if (!hasAutoArrange) {
+      // 用户完全明确指定了数量，不添加额外菜品
+      const generationTime = Date.now() - startTime
+      const budgetUtilization = (totalCost / constraints.budget) * 100
+      if (budgetUtilization < 85) {
+        warnings.push(`用户指定了具体菜品数量，预算利用率为${budgetUtilization.toFixed(1)}%`)
+      }
+      
+      return {
+        dishes: selectedDishes,
+        totalCost,
+        metadata: {
+          generationTime,
+          algorithmVersion: 'v1.4.0-autofix',
+          satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
+            type => selectedDishes.some(item => item.dish.type === type)
+          ),
+          warnings
+        }
+      }
+    }
+  }
+  
+  // 如果当前花费不足目标预算，继续添加菜品（仅限于自动安排的情况）
   if (totalCost < targetBudget) {
     const specifiedTypes = new Set(Object.keys(constraints.typeDistribution))
     const allTypes = Object.keys(dishesByType) as Dish['type'][]
@@ -335,24 +366,7 @@ export function generateDishes(
         })
     })
     
-    // 添加已指定类型的额外菜品（可以超出用户指定的数量）
-    Object.entries(constraints.typeDistribution)
-      .filter(([_, count]) => count > 0) // 只处理明确指定数量的类型
-      .forEach(([type]) => {
-        const dishes = dishesByType[type as Dish['type']] || []
-        const alreadySelected = selectedDishes.filter(item => item.dish.type === type).map(item => item.dish.id)
-        dishes
-          .filter(dish => !alreadySelected.includes(dish.id))
-          .forEach(dish => {
-            // 检查温度约束，排除被设为0的温度
-            if (hasTemperatureConstraints) {
-              const dishTemp = dish.temperature || '无'
-              const tempConstraint = constraints.temperatureDistribution[dishTemp as NonNullable<Dish['temperature']>]
-              if (tempConstraint === 0) return // 跳过被排除的温度
-            }
-            candidatePool.push({ dish, type: type as Dish['type'], isExtra: true })
-          })
-      })
+    // 不再添加已指定类型的额外菜品，避免超出用户指定数量
     
     // 按价格排序候选菜品（考虑实际数量）
     candidatePool.sort((a, b) => {

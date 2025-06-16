@@ -463,8 +463,8 @@ describe('菜品生成算法', () => {
       headcount: 4,
       budget: 200, // 充足预算
       typeDistribution: {
-        '主食': 1,
-        '主菜': 1
+        '主食': -1,  // 自动安排，让算法优化预算利用率
+        '主菜': -1   // 自动安排，让算法优化预算利用率
         // 其他类型留空，让算法优化预算利用率
       },
       temperatureDistribution: {},
@@ -724,9 +724,9 @@ describe('温度搭配功能', () => {
       headcount: 4,
       budget: 200,
       typeDistribution: {
-        '主食': 1,
-        '主菜': 1,
-        '副菜': 1
+        '主食': -1,  // 自动安排，这样才会填充到预算上限
+        '主菜': -1,  // 自动安排
+        '副菜': -1   // 自动安排
       },
       temperatureDistribution: {
         '热': -1,
@@ -796,5 +796,40 @@ describe('温度搭配功能', () => {
     expect(coldDishes.length).toBe(0) // 应该没有冷菜
     expect(hotDishes.length).toBeGreaterThan(0) // 应该有热菜
     expect(result.dishes.length).toBeGreaterThan(0)
+  })
+
+  it('应该严格遵守用户指定的菜品数量，不超量', () => {
+    const exactQuantityConstraints: Constraints = {
+      headcount: 4,
+      budget: 1000, // 充足预算
+      typeDistribution: {
+        '主食': 1,
+        '主菜': 2,
+        '副菜': 1
+        // 总计4道菜
+      },
+      temperatureDistribution: {},
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+    
+    const result = generateDishes(tempDishes, exactQuantityConstraints)
+    
+    // 验证总数量严格等于用户指定的数量
+    const expectedTotal = 1 + 2 + 1 // 4道菜
+    expect(result.dishes.length).toBe(expectedTotal)
+    
+    // 验证各类型数量准确
+    const mainFoodCount = result.dishes.filter(item => item.dish.type === '主食').length
+    const mainDishCount = result.dishes.filter(item => item.dish.type === '主菜').length
+    const sideDishCount = result.dishes.filter(item => item.dish.type === '副菜').length
+    
+    expect(mainFoodCount).toBe(1)
+    expect(mainDishCount).toBe(2)
+    expect(sideDishCount).toBe(1)
+    
+    // 应该有预算利用率提示
+    expect(result.metadata.warnings.some(w => w.includes('用户指定了具体菜品数量'))).toBe(true)
   })
 })
