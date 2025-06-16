@@ -283,6 +283,93 @@
   color: #666;
 }
 
+/* 温度标签样式 */
+.temperature-tag {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.temperature-tag.热 {
+  background: #ff6b6b;
+  color: white;
+}
+
+.temperature-tag.冷 {
+  background: #74c0fc;
+  color: white;
+}
+
+.temperature-tag.无 {
+  background: #e9ecef;
+  color: #666;
+}
+
+/* 荤素标签样式 */
+.meat-tag {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.meat-tag.荤 {
+  background: #ffa8a8;
+  color: #c92a2a;
+}
+
+.meat-tag.素 {
+  background: #b2f2bb;
+  color: #2b8a3e;
+}
+
+.meat-tag.无 {
+  background: #e9ecef;
+  color: #666;
+}
+
+/* 数量注释 */
+.quantity-note {
+  margin-left: 0.3rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+/* 详情信息样式 */
+.dish-details {
+  min-width: 80px;
+}
+
+.details-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.details-info > div {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: help;
+}
+
+.description,
+.spicy-level,
+.cooking-time,
+.allergens,
+.popularity {
+  opacity: 0.8;
+}
+
+.no-tags {
+  color: #999;
+  font-style: italic;
+}
+
 /* 菜品紧凑列表 */
 .dishes-compact-list {
   margin-top: 0.5rem;

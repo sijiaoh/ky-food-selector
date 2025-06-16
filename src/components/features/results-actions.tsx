@@ -102,9 +102,13 @@ export function ResultsActions({
               <tr>
                 <th>菜名</th>
                 <th>类型</th>
+                <th>温度</th>
+                <th>荤素</th>
+                <th>标签</th>
                 <th>数量</th>
                 <th>单价</th>
                 <th>总价</th>
+                <th>详情</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -133,9 +137,62 @@ export function ResultsActions({
                       {removed && <span className="status-badge removed">❌</span>}
                     </td>
                     <td className="dish-type">{displayDish.type}</td>
-                    <td className="dish-quantity">{quantity}</td>
+                    <td className="dish-temperature">
+                      <span className={`temperature-tag ${displayDish.temperature || '无'}`}>
+                        {displayDish.temperature || '无'}
+                      </span>
+                    </td>
+                    <td className="dish-meat-type">
+                      <span className={`meat-tag ${displayDish.meatType || '无'}`}>
+                        {displayDish.meatType || '无'}
+                      </span>
+                    </td>
+                    <td className="dish-tags">
+                      {displayDish.tags.length > 0 ? (
+                        <div className="tags-container">
+                          {displayDish.tags.map((tag, index) => (
+                            <span key={index} className="tag">{tag}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="no-tags">-</span>
+                      )}
+                    </td>
+                    <td className="dish-quantity">
+                      {quantity}
+                      {displayDish.scaleWithPeople && (
+                        <span className="quantity-note" title="根据人数加量">👥</span>
+                      )}
+                    </td>
                     <td className="dish-price">¥{displayDish.price}</td>
                     <td className="dish-total">¥{totalPrice}</td>
+                    <td className="dish-details">
+                      <div className="details-info">
+                        {displayDish.description && (
+                          <div className="description" title={displayDish.description}>📝</div>
+                        )}
+                        {displayDish.spicyLevel && (
+                          <div className="spicy-level" title={`辣度：${displayDish.spicyLevel}级`}>
+                            🌶️{displayDish.spicyLevel}
+                          </div>
+                        )}
+                        {displayDish.cookingTime && (
+                          <div className="cooking-time" title={`制作时间：${displayDish.cookingTime}分钟`}>
+                            ⏱️{displayDish.cookingTime}m
+                          </div>
+                        )}
+                        {displayDish.allergens && displayDish.allergens.length > 0 && (
+                          <div className="allergens" title={`过敏原：${displayDish.allergens.join(', ')}`}>
+                            ⚠️
+                          </div>
+                        )}
+                        {displayDish.popularity && (
+                          <div className="popularity" title={`受欢迎程度：${(displayDish.popularity * 100).toFixed(0)}%`}>
+                            ⭐{(displayDish.popularity * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     <td className="dish-actions">
                       {!removed && (
                         <div className="action-group">
