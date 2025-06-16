@@ -57,16 +57,42 @@ const selectDishesForType = (availableForType: Dish[], temperatureFilter?: strin
 
 export function generateDishes(
   availableDishes: Dish[], 
-  constraints: Constraints
+  constraints: Constraints,
+  previousResult?: GenerationResult
 ): GenerationResult {
   const startTime = Date.now()
   const selectedDishes: GenerationResult['dishes'] = []
   const warnings: string[] = []
   let totalCost = 0
 
-  // 过滤掉排除标签的菜品
+  // 首先处理固定的菜品
+  const fixedDishes: GenerationResult['dishes'] = []
+  if (previousResult) {
+    const fixedItems = previousResult.dishes.filter(item => item.isFixed)
+    fixedItems.forEach(item => {
+      // 验证固定的菜品是否仍然在可用菜品列表中
+      const stillAvailable = availableDishes.find(dish => dish.id === item.dish.id)
+      if (stillAvailable && !stillAvailable.tags.some(tag => constraints.excludedTags.includes(tag))) {
+        fixedDishes.push({
+          ...item,
+          isFixed: true // 确保保持固定状态
+        })
+        totalCost += item.totalPrice
+        warnings.push(`保留固定菜品: ${item.dish.name}`)
+      } else {
+        warnings.push(`固定菜品 ${item.dish.name} 不再可用，已移除`)
+      }
+    })
+    selectedDishes.push(...fixedDishes)
+  }
+
+  // 获取已固定菜品的ID列表
+  const fixedDishIds = fixedDishes.map(item => item.dish.id)
+
+  // 过滤掉排除标签的菜品和已经固定的菜品（避免重复选择）
   const filteredDishes = availableDishes.filter(dish => 
-    !dish.tags.some(tag => constraints.excludedTags.includes(tag))
+    !dish.tags.some(tag => constraints.excludedTags.includes(tag)) &&
+    !fixedDishIds.includes(dish.id) // 排除已固定的菜品
   )
 
   // 按类型分组
@@ -134,11 +160,12 @@ export function generateDishes(
       actualCount = availableForType.length
       warnings.push(`自动为${type}安排，将随机填充到预算上限`)
     } else {
-      // 用户明确指定数量
-      actualCount = Math.min(requestedCount, availableForType.length)
+      // 用户明确指定数量，严格按照指定数量执行
+      actualCount = requestedCount
       
-      if (actualCount < requestedCount) {
-        warnings.push(`${type}菜品数量不足，请求${requestedCount}个，仅能提供${actualCount}个`)
+      if (availableForType.length < requestedCount) {
+        warnings.push(`${type}菜品数量不足，请求${requestedCount}个，仅有${availableForType.length}个可选`)
+        actualCount = availableForType.length
       }
     }
 
@@ -246,16 +273,15 @@ export function generateDishes(
     for (const dish of selectedInThisType) {
       if (!dish) continue // 跳过undefined
       
-      // 计算实际数量：如果需要根据人数加量，数量为基础个数×人数；否则为基础个数
-      const quantity = dish.scaleWithPeople ? dish.baseQuantity * constraints.headcount : dish.baseQuantity
+      // 计算实际数量：如果需要根据人数加量，数量为max(基础个数, 人数)；否则为基础个数
+      const quantity = dish.scaleWithPeople ? Math.max(dish.baseQuantity, constraints.headcount) : dish.baseQuantity
       const dishPrice = dish.price // 保持单价不变
       const totalPrice = dishPrice * quantity
 
-      // 如果不是自动安排模式，需要检查预算
+      // 如果不是自动安排模式，优先满足指定数量，预算检查仅作提醒
       if (requestedCount !== -1) {
         if (totalCost + totalPrice > constraints.budget) {
-          warnings.push('预算可能不足，无法满足所有约束')
-          break
+          warnings.push(`为满足${type}数量要求，选择了${dish.name}，当前总价¥${(totalCost + totalPrice).toFixed(1)}已超出预算`)
         }
       }
 
@@ -291,32 +317,57 @@ export function generateDishes(
   const maxBudget = constraints.budget // 最大预算：100%
   
   // 检查是否有用户明确指定数量的约束（>0的数值）
-  const hasExplicitCounts = Object.values(constraints.typeDistribution).some(count => count > 0)
+  // 检查是否所有类型都被明确指定（只有0和正数，没有-1）
+  const allTypesExplicit = Object.values(constraints.typeDistribution).every(count => 
+    count !== undefined && count >= 0
+  )
   
-  // 如果用户明确指定了所有数量，就不进行预算优化添加额外菜品
-  if (hasExplicitCounts) {
-    const hasAutoArrange = Object.values(constraints.typeDistribution).some(count => count === -1)
+  // 如果用户明确指定了所有数量，严格按照指定数量执行，不添加额外菜品
+  if (allTypesExplicit) {
+    const generationTime = Date.now() - startTime
+    const budgetUtilization = (totalCost / constraints.budget) * 100
+    if (budgetUtilization < 70) {
+      warnings.push(`严格按用户指定数量生成，预算利用率为${budgetUtilization.toFixed(1)}%，可考虑增加菜品数量`)
+    } else if (budgetUtilization > 100) {
+      warnings.push(`所选菜品超出预算${((budgetUtilization - 100)).toFixed(1)}%`)
+    }
     
-    // 只有当存在自动安排(-1)时才继续优化预算
-    if (!hasAutoArrange) {
-      // 用户完全明确指定了数量，不添加额外菜品
-      const generationTime = Date.now() - startTime
-      const budgetUtilization = (totalCost / constraints.budget) * 100
-      if (budgetUtilization < 85) {
-        warnings.push(`用户指定了具体菜品数量，预算利用率为${budgetUtilization.toFixed(1)}%`)
+    return {
+      dishes: selectedDishes,
+      totalCost,
+      metadata: {
+        generationTime,
+        algorithmVersion: 'v1.5.0-strict',
+        satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
+          type => selectedDishes.some(item => item.dish.type === type)
+        ),
+        warnings
       }
-      
-      return {
-        dishes: selectedDishes,
-        totalCost,
-        metadata: {
-          generationTime,
-          algorithmVersion: 'v1.4.0-autofix',
-          satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
-            type => selectedDishes.some(item => item.dish.type === type)
-          ),
-          warnings
-        }
+    }
+  }
+  
+  // 检查是否有自动安排的类型（-1值）
+  const hasAutoArrange = Object.values(constraints.typeDistribution).some(count => count === -1)
+  
+  // 只有存在自动安排(-1)时才继续预算优化
+  if (!hasAutoArrange) {
+    // 没有自动安排，但可能有空值的类型，也严格执行
+    const generationTime = Date.now() - startTime
+    const budgetUtilization = (totalCost / constraints.budget) * 100
+    if (budgetUtilization < 70) {
+      warnings.push(`按用户配置生成，预算利用率为${budgetUtilization.toFixed(1)}%`)
+    }
+    
+    return {
+      dishes: selectedDishes,
+      totalCost,
+      metadata: {
+        generationTime,
+        algorithmVersion: 'v1.5.0-strict',
+        satisfiedConstraints: Object.keys(constraints.typeDistribution).filter(
+          type => selectedDishes.some(item => item.dish.type === type)
+        ),
+        warnings
       }
     }
   }
@@ -370,8 +421,8 @@ export function generateDishes(
     
     // 按价格排序候选菜品（考虑实际数量）
     candidatePool.sort((a, b) => {
-      const quantityA = a.dish.scaleWithPeople ? a.dish.baseQuantity * constraints.headcount : a.dish.baseQuantity
-      const quantityB = b.dish.scaleWithPeople ? b.dish.baseQuantity * constraints.headcount : b.dish.baseQuantity
+      const quantityA = a.dish.scaleWithPeople ? Math.max(a.dish.baseQuantity, constraints.headcount) : a.dish.baseQuantity
+      const quantityB = b.dish.scaleWithPeople ? Math.max(b.dish.baseQuantity, constraints.headcount) : b.dish.baseQuantity
       const totalPriceA = a.dish.price * quantityA
       const totalPriceB = b.dish.price * quantityB
       return totalPriceA - totalPriceB
@@ -386,7 +437,7 @@ export function generateDishes(
       for (let i = 0; i < candidatePool.length; i++) {
         const candidate = candidatePool[i]!
         const quantity = candidate.dish.scaleWithPeople 
-          ? candidate.dish.baseQuantity * constraints.headcount 
+          ? Math.max(candidate.dish.baseQuantity, constraints.headcount)
           : candidate.dish.baseQuantity
         const dishTotalPrice = candidate.dish.price * quantity
         const newTotalCost = totalCost + dishTotalPrice
@@ -499,7 +550,7 @@ export function applyManualAdjustments(
       case 'replace':
         if (adjustment.newDish) {
           const quantity = adjustment.newDish.scaleWithPeople 
-            ? adjustment.newDish.baseQuantity * constraints.headcount 
+            ? Math.max(adjustment.newDish.baseQuantity, constraints.headcount)
             : adjustment.newDish.baseQuantity
           const dishPrice = adjustment.newDish.price
           const totalPrice = dishPrice * quantity

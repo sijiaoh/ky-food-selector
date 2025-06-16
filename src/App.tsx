@@ -14,6 +14,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null)
+  const [menuCollapsed, setMenuCollapsed] = useState(true) // 菜单折叠状态
   const [constraints, setConstraints] = useState<Constraints>({
     headcount: 4,
     budget: 200,
@@ -60,7 +61,7 @@ function App() {
       // 添加小延迟让用户看到加载状态
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      const result = generateDishes(parsedData.dishes, constraints)
+      const result = generateDishes(parsedData.dishes, constraints, generationResult || undefined)
       setGenerationResult(result)
       
       if (result.metadata.warnings.length > 0) {
@@ -89,6 +90,30 @@ function App() {
     } catch (err) {
       setError('应用调整失败，请重试')
       console.error('Adjustment error:', err)
+    }
+  }
+
+  const handleToggleFixed = (dishId: string) => {
+    if (!generationResult) return
+
+    try {
+      // 直接修改结果中的固定状态
+      const updatedDishes = generationResult.dishes.map(item => {
+        if (item.dish.id === dishId) {
+          return { ...item, isFixed: !item.isFixed }
+        }
+        return item
+      })
+
+      const updatedResult: GenerationResult = {
+        ...generationResult,
+        dishes: updatedDishes
+      }
+
+      setGenerationResult(updatedResult)
+    } catch (err) {
+      setError('切换固定状态失败，请重试')
+      console.error('Toggle fixed error:', err)
     }
   }
 
@@ -148,8 +173,19 @@ function App() {
 
             {parsedData.dishes.length > 0 && (
               <div className="dishes-preview">
-                <h3>菜品列表 ({parsedData.dishes.length}道菜)</h3>
-                <div className="dishes-compact-list">
+                <div className="section-header">
+                  <h3>菜品列表 ({parsedData.dishes.length}道菜)</h3>
+                  <button 
+                    className="collapse-toggle"
+                    onClick={() => setMenuCollapsed(!menuCollapsed)}
+                    title={menuCollapsed ? '展开菜品列表' : '折叠菜品列表'}
+                  >
+                    {menuCollapsed ? '▼ 展开' : '▲ 折叠'}
+                  </button>
+                </div>
+                
+                {!menuCollapsed && (
+                  <div className="dishes-compact-list">
                   {parsedData.dishes.map((dish) => (
                     <div key={dish.id} className="dish-item-single">
                       <div className="dish-main-info">
@@ -177,7 +213,8 @@ function App() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -252,6 +289,7 @@ function App() {
               result={generationResult}
               onRegenerate={handleGenerateDishes}
               onApplyAdjustments={handleApplyAdjustments}
+              onToggleFixed={handleToggleFixed}
             />
           </section>
         )}

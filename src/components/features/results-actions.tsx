@@ -5,19 +5,20 @@ interface ResultsActionsProps {
   result: GenerationResult
   onRegenerate: () => void
   onApplyAdjustments: (adjustments: ManualAdjustment[]) => void
+  onToggleFixed: (dishId: string) => void
 }
 
 export function ResultsActions({ 
   result, 
   onRegenerate, 
-  onApplyAdjustments 
+  onApplyAdjustments,
+  onToggleFixed
 }: ResultsActionsProps) {
   const [adjustments, setAdjustments] = useState<ManualAdjustment[]>([])
   const [showAlternatives, setShowAlternatives] = useState<Record<string, boolean>>({})
 
-  const handleFixDish = (dishId: string) => {
-    const newAdjustment: ManualAdjustment = { type: 'fix', dishId }
-    setAdjustments([...adjustments.filter(adj => adj.dishId !== dishId), newAdjustment])
+  const handleToggleFixed = (dishId: string) => {
+    onToggleFixed(dishId)
   }
 
   const handleReplaceDish = (dishId: string, newDish: Dish) => {
@@ -44,13 +45,10 @@ export function ResultsActions({
     setShowAlternatives({})
   }
 
-  const resetChanges = () => {
-    setAdjustments([])
-    setShowAlternatives({})
-  }
-
   const isFixed = (dishId: string) => {
-    return adjustments.some(adj => adj.dishId === dishId && adj.type === 'fix')
+    // 直接从result中获取固定状态
+    const dishItem = result.dishes.find(item => item.dish.id === dishId)
+    return dishItem?.isFixed || false
   }
 
   const isReplaced = (dishId: string) => {
@@ -77,27 +75,20 @@ export function ResultsActions({
         </button>
         
         {adjustments.length > 0 && (
-          <>
-            <button 
-              className="action-button apply-button"
-              onClick={applyChanges}
-            >
-              ✅ 应用更改 ({adjustments.length})
-            </button>
-            <button 
-              className="action-button reset-button"
-              onClick={resetChanges}
-            >
-              ↶ 重置更改
-            </button>
-          </>
+          <button 
+            className="action-button apply-button"
+            onClick={applyChanges}
+          >
+            ✅ 应用替换和移除 ({adjustments.length})
+          </button>
         )}
       </div>
 
       <div className="dishes-with-actions">
         <h3>菜品详情</h3>
+        
         <div className="dishes-table-container">
-          <table className="dishes-table">
+              <table className="dishes-table">
             <thead>
               <tr>
                 <th>菜名</th>
@@ -198,7 +189,7 @@ export function ResultsActions({
                         <div className="action-group">
                           <button
                             className={`action-btn ${fixed ? 'active' : ''}`}
-                            onClick={() => handleFixDish(dishId)}
+                            onClick={() => handleToggleFixed(dishId)}
                             title={fixed ? '取消固定' : '固定此菜品'}
                           >
                             📌
@@ -214,13 +205,25 @@ export function ResultsActions({
                             </button>
                           )}
                           
-                          <button
-                            className="action-btn remove"
-                            onClick={() => handleRemoveDish(dishId)}
-                            title="移除此菜品"
-                          >
-                            ❌
-                          </button>
+                          {!fixed && (
+                            <button
+                              className="action-btn remove"
+                              onClick={() => handleRemoveDish(dishId)}
+                              title="移除此菜品"
+                            >
+                              ❌
+                            </button>
+                          )}
+                          
+                          {fixed && (
+                            <button
+                              className="action-btn remove disabled"
+                              disabled
+                              title="固定菜品不能移除"
+                            >
+                              🔒
+                            </button>
+                          )}
                         </div>
                       )}
                       
@@ -237,12 +240,12 @@ export function ResultsActions({
                   </tr>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
+              </tbody>
+              </table>
+            </div>
 
-        {/* 替换选项 */}
-        {Object.entries(showAlternatives).map(([dishId, show]) => {
+            {/* 替换选项 */}
+            {Object.entries(showAlternatives).map(([dishId, show]) => {
           if (!show) return null
           
           const dishItem = result.dishes.find(item => item.dish.id === dishId)
@@ -274,7 +277,7 @@ export function ResultsActions({
               </div>
             </div>
           )
-        })}
+            })}
       </div>
     </div>
   )

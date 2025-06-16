@@ -58,6 +58,17 @@ describe('菜品生成算法', () => {
       tags: ['绿豆', '甜品', '消暑'],
       baseQuantity: 1,
       scaleWithPeople: false
+    },
+    {
+      id: '6',
+      name: '炒面',
+      price: 12,
+      type: '主食',
+      temperature: '热',
+      meatType: '荤',
+      tags: ['面条', '炒制'],
+      baseQuantity: 1,
+      scaleWithPeople: false
     }
   ]
 
@@ -143,7 +154,10 @@ describe('菜品生成算法', () => {
     
     const result = generateDishes(sampleDishes, lowBudgetConstraints)
     
-    expect(result.metadata.warnings).toContain('预算可能不足，无法满足所有约束')
+    const hasOverBudgetWarning = result.metadata.warnings.some(warning => 
+      warning.includes('超出预算') || warning.includes('为满足') || warning.includes('预算利用率')
+    )
+    expect(hasOverBudgetWarning).toBe(true)
   })
 
   it('应该在没有足够菜品时返回警告', () => {
@@ -183,9 +197,9 @@ describe('菜品生成算法', () => {
     const result = generateDishes(sampleDishes, basicConstraints)
     
     result.dishes.forEach(({ dish, quantity, totalPrice }) => {
-      // 新的逻辑：数量已经是实际数量（考虑了人数）
+      // 新的逻辑：数量为max(基础个数, 人数)
       const expectedQuantity = dish.scaleWithPeople 
-        ? dish.baseQuantity * basicConstraints.headcount 
+        ? Math.max(dish.baseQuantity, basicConstraints.headcount)
         : dish.baseQuantity
       expect(quantity).toBe(expectedQuantity)
       
@@ -489,6 +503,45 @@ describe('菜品生成算法', () => {
     // 验证添加了额外菜品
     expect(result.dishes.length).toBeGreaterThan(2) // 应该超过最初指定的2个菜品
   })
+
+  it('应该严格按照指定数量生成，不超过', () => {
+    const strictConstraints: Constraints = {
+      headcount: 4,
+      budget: 50, // 较小预算，可能不足
+      typeDistribution: {
+        '主食': 2,  // 明确指定2个主食
+        '主菜': 1,  // 明确指定1个主菜
+        '副菜': 0,  // 明确不要副菜
+        '汤': 0,    // 明确不要汤
+        '点心': 0   // 明确不要点心
+      },
+      temperatureDistribution: {},
+      meatDistribution: {},
+      tagRequirements: {},
+      excludedTags: []
+    }
+
+    const result = generateDishes(sampleDishes, strictConstraints)
+
+    // 验证严格按照指定数量
+    const mainFoodCount = result.dishes.filter(item => item.dish.type === '主食').length
+    const mainDishCount = result.dishes.filter(item => item.dish.type === '主菜').length
+    const sideDishCount = result.dishes.filter(item => item.dish.type === '副菜').length
+    const soupCount = result.dishes.filter(item => item.dish.type === '汤').length
+    const dessertCount = result.dishes.filter(item => item.dish.type === '点心').length
+
+    expect(mainFoodCount).toBe(2) // 严格等于2
+    expect(mainDishCount).toBe(1) // 严格等于1
+    expect(sideDishCount).toBe(0) // 严格等于0
+    expect(soupCount).toBe(0)     // 严格等于0
+    expect(dessertCount).toBe(0)  // 严格等于0
+
+    // 总菜品数应该等于指定数量之和
+    expect(result.dishes.length).toBe(3) // 2+1+0+0+0=3
+
+    // 验证算法版本
+    expect(result.metadata.algorithmVersion).toBe('v1.5.0-strict')
+  })
 })
 
 describe('手动调整功能', () => {
@@ -556,6 +609,33 @@ describe('手动调整功能', () => {
     const fixedDish = adjustedResult.dishes.find(item => item.dish.id === dishToFix.dish.id)
     
     expect(fixedDish?.isFixed).toBe(true)
+  })
+
+  it('重新生成时应该保留固定菜品', () => {
+    // 第一次生成
+    const firstResult = generateDishes(sampleDishes, basicConstraints)
+    const dishToFix = firstResult.dishes[0]!
+    
+    // 固定一个菜品
+    const adjustments: ManualAdjustment[] = [
+      { type: 'fix', dishId: dishToFix.dish.id }
+    ]
+    const adjustedResult = applyManualAdjustments(firstResult, adjustments, basicConstraints)
+    
+    // 重新生成，传入前一次结果
+    const secondResult = generateDishes(sampleDishes, basicConstraints, adjustedResult)
+    
+    // 验证固定的菜品仍然在结果中
+    const fixedDish = secondResult.dishes.find(item => item.dish.id === dishToFix.dish.id)
+    expect(fixedDish).toBeDefined()
+    expect(fixedDish?.isFixed).toBe(true)
+    expect(fixedDish?.dish.name).toBe(dishToFix.dish.name)
+    
+    // 验证警告信息中包含保留固定菜品的提示
+    const hasFixedWarning = secondResult.metadata.warnings.some(warning => 
+      warning.includes('保留固定菜品') && warning.includes(dishToFix.dish.name)
+    )
+    expect(hasFixedWarning).toBe(true)
   })
 
   it('应该能替换菜品', () => {
@@ -830,6 +910,8 @@ describe('温度搭配功能', () => {
     expect(sideDishCount).toBe(1)
     
     // 应该有预算利用率提示
-    expect(result.metadata.warnings.some(w => w.includes('用户指定了具体菜品数量'))).toBe(true)
+    expect(result.metadata.warnings.some(w => 
+      w.includes('严格按用户指定数量生成') || w.includes('按用户配置生成')
+    )).toBe(true)
   })
 })

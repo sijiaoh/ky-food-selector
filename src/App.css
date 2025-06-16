@@ -370,6 +370,50 @@
   font-style: italic;
 }
 
+/* 折叠功能样式 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.collapse-toggle {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.collapse-toggle:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  color: #333;
+}
+
+.collapse-toggle:active {
+  transform: translateY(1px);
+}
+
+/* 折叠动画 */
+.dishes-table-container {
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
 /* 菜品紧凑列表 */
 .dishes-compact-list {
   margin-top: 0.5rem;
@@ -705,6 +749,20 @@
 .action-btn.undo:hover {
   background: #218838;
   border-color: #1e7e34;
+}
+
+.action-btn.disabled {
+  background: #e9ecef !important;
+  color: #6c757d !important;
+  border-color: #dee2e6 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.action-btn.disabled:hover {
+  background: #e9ecef !important;
+  border-color: #dee2e6 !important;
+  transform: none !important;
 }
 
 /* 菜品状态 */
